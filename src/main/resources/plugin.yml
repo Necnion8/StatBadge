@@ -1,0 +1,6 @@
+name: StatBadge
+version: '${version}'
+main: com.gmail.necnionch.myplugin.statbadge.bukkit.StatBadgePlugin
+api-version: '1.13'
+authors: [Necnion8]
+website: https://github.com/Necnion8/StatBadge

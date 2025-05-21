@@ -1,6 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.database;
 
-import com.gmail.necnionch.myplugin.statbadge.bukkit.action.ActionRecord;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.action.PlayerAction;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.action.PlayerStats;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
@@ -17,11 +18,9 @@ public interface StatBadgeDatabase {
     void initDatabase() throws SQLException;
 
 
-    void addAction(ActionRecord action);
+    void addActions(Iterable<PlayerAction> actions) throws SQLException;
 
-    void addActions(Iterable<ActionRecord> actions);
-
-    List<ActionRecord.Stats> getActionStats(@Nullable ActionRecord.Filter filter);
+    List<PlayerStats> getActionStats(@Nullable PlayerAction.Filter filter) throws SQLException;
 
 
 }

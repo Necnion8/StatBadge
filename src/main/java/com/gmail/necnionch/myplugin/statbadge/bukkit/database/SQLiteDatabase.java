@@ -1,16 +1,18 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.database;
 
-import com.gmail.necnionch.myplugin.statbadge.bukkit.action.ActionType;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.action.PlayerAction;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.action.PlayerStats;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerAction;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.sql.*;
-import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class SQLiteDatabase implements StatBadgeDatabase {
@@ -137,62 +139,116 @@ public class SQLiteDatabase implements StatBadgeDatabase {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             for (PlayerAction action : actions) {
-                stmt.setString(1, action.player().toString());
-                stmt.setString(2, action.type().plugin());
-                stmt.setString(3, action.type().type());
-                stmt.setLong(4, action.time().toEpochMilli());
-                stmt.setString(5, action.key1());
-                stmt.setString(6, action.key2());
-                stmt.setString(7, action.key3());
-                stmt.setLong(8, action.value());
+                stmt.setString(1, action.getPlayer().toString());
+                stmt.setString(2, action.getType().getNamespace());
+                stmt.setString(3, action.getType().getKey());
+                stmt.setLong(4, action.getTime().toEpochMilli());
+                stmt.setString(5, action.getKey1());
+                stmt.setString(6, action.getKey2());
+                stmt.setString(7, action.getKey3());
+                stmt.setLong(8, action.getValue());
                 stmt.executeUpdate();
             }
         }
     }
 
     @Override
-    public List<PlayerStats> getActionStats(PlayerAction.@Nullable Filter filter) throws SQLException {
-        String sql = "SELECT `player`, `plugin`, `id`, `time`, `key1`, `key2`, `key3`, SUM(`value`) FROM `player_actions`";
+    public List<PlayerActionStats> getActionStats(PlayerAction.@Nullable Filter filter) throws SQLException {
+//        String sql = "SELECT `player`, `plugin`, `id`, `time`, `key1`, `key2`, `key3`, SUM(`value`) FROM `player_actions`";
+//        List<String> conditions = new ArrayList<>();
+//        List<StatementArgumentSetter> conditionArgs = new ArrayList<>();
+//
+//        if (filter != null) {
+//            if (!filter.isAllPlayers()) {
+//                if (filter.players().isEmpty())
+//                    return Collections.emptyList();
+//
+//                String uuids = filter.players().stream().map(uuid -> "\"" + uuid + "\"").collect(Collectors.joining(","));
+//                conditions.add("`player` in (" + uuids + ")");
+//            }
+//
+//            Optional.ofNullable(filter.timeFrom()).ifPresent(time -> {
+//                conditions.add("? <= `time`");
+//                conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
+//            });
+//
+//            Optional.ofNullable(filter.timeTo()).ifPresent(time -> {
+//                conditions.add("`time` <= ?");
+//                conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
+//            });
+//
+//            Optional.ofNullable(filter.keys1()).ifPresent(keys -> {
+//                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
+//                conditions.add("`key1` in (" + joinedKeys + ")");
+//            });
+//
+//            Optional.ofNullable(filter.keys2()).ifPresent(keys -> {
+//                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
+//                conditions.add("`key2` in (" + joinedKeys + ")");
+//            });
+//
+//            Optional.ofNullable(filter.keys3()).ifPresent(keys -> {
+//                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
+//                conditions.add("`key3` in (" + joinedKeys + ")");
+//            });
+//        }
+//
+//        if (!conditions.isEmpty())
+//            sql += " WHEN " + String.join(" AND ", conditions);
+//
+//        try (Connection conn = getConnectionTry();
+//             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//
+//            int i = 1;
+//            for (StatementArgumentSetter setter : conditionArgs) {
+//                setter.set(stmt, i++);
+//            }
+//
+//            try (ResultSet resultSet = stmt.executeQuery()) {
+//                List<PlayerActionStats> stats = new ArrayList<>();
+//                while (resultSet.next()) {
+//                    UUID player = UUID.fromString(resultSet.getString(1));
+//                    String plugin = resultSet.getString(2);
+//                    String id = resultSet.getString(3);
+//                    long time = resultSet.getLong(4);
+//                    String key1 = resultSet.getString(5);
+//                    String key2 = resultSet.getString(6);
+//                    String key3 = resultSet.getString(7);
+//                    long value = resultSet.getLong(8);
+//                    stats.add(new PlayerStats(player, new ActionType(plugin, id), Instant.ofEpochMilli(time), value, key1, key2, key3));
+//                }
+//                return stats;
+//            }
+//        }
+        return null;
+    }
+
+    @Override
+    public <AS extends PlayerActionStats> void loadActionStatsTo(Badge<AS> badge) throws SQLException {
+        String sql = "SELECT `player`, `plugin`, `type`, `time`, `key1`, `key2`, `key3`, SUM(`value`) FROM `player_actions`";
         List<String> conditions = new ArrayList<>();
         List<StatementArgumentSetter> conditionArgs = new ArrayList<>();
 
-        if (filter != null) {
-            if (!filter.isAllPlayers()) {
-                if (filter.players().isEmpty())
-                    return Collections.emptyList();
+        conditions.add("`player` = ? AND `plugin` = ? AND `type` = ?");
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getPlayer().toString()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getType().getNamespace()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getType().getKey()));
 
-                String uuids = filter.players().stream().map(uuid -> "\"" + uuid + "\"").collect(Collectors.joining(","));
-                conditions.add("`player` in (" + uuids + ")");
-            }
+        Optional.ofNullable(badge.getStartTime()).ifPresent(time -> {
+            conditions.add("? <= `time`");
+            conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
+        });
 
-            Optional.ofNullable(filter.timeFrom()).ifPresent(time -> {
-                conditions.add("? <= `time`");
-                conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
-            });
+        Optional.ofNullable(badge.getCompleteTime()).ifPresent(time -> {
+            conditions.add("`time` <= ?");
+            conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
+        });
 
-            Optional.ofNullable(filter.timeTo()).ifPresent(time -> {
-                conditions.add("`time` <= ?");
-                conditionArgs.add((stmt, idx) -> stmt.setLong(idx, time.toEpochMilli()));
-            });
+        createKeyCondition(badge.getStats().getKeyCondition1(), "key1", conditions, conditionArgs);
+        createKeyCondition(badge.getStats().getKeyCondition2(), "key2", conditions, conditionArgs);
+        createKeyCondition(badge.getStats().getKeyCondition3(), "key3", conditions, conditionArgs);
 
-            Optional.ofNullable(filter.keys1()).ifPresent(keys -> {
-                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
-                conditions.add("`key1` in (" + joinedKeys + ")");
-            });
-
-            Optional.ofNullable(filter.keys2()).ifPresent(keys -> {
-                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
-                conditions.add("`key2` in (" + joinedKeys + ")");
-            });
-
-            Optional.ofNullable(filter.keys3()).ifPresent(keys -> {
-                String joinedKeys = keys.stream().map(s -> "\"" + s.replace("\"", "\\\"") + "\"").collect(Collectors.joining(","));
-                conditions.add("`key3` in (" + joinedKeys + ")");
-            });
-        }
-
-        if (!conditions.isEmpty())
-            sql += " WHEN " + String.join(" AND ", conditions);
+        sql += " WHEN " + String.join(" AND ", conditions);
 
         try (Connection conn = getConnectionTry();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -203,23 +259,37 @@ public class SQLiteDatabase implements StatBadgeDatabase {
             }
 
             try (ResultSet resultSet = stmt.executeQuery()) {
-                List<PlayerStats> stats = new ArrayList<>();
-                while (resultSet.next()) {
-                    UUID player = UUID.fromString(resultSet.getString(1));
-                    String plugin = resultSet.getString(2);
-                    String id = resultSet.getString(3);
-                    long time = resultSet.getLong(4);
-                    String key1 = resultSet.getString(5);
-                    String key2 = resultSet.getString(6);
-                    String key3 = resultSet.getString(7);
+                if (resultSet.next()) {
                     long value = resultSet.getLong(8);
-                    stats.add(new PlayerStats(player, new ActionType(plugin, id), Instant.ofEpochMilli(time), value, key1, key2, key3));
+                    badge.getStats().setValue(badge.getStats().getValue() + value);
                 }
-                return stats;
             }
         }
     }
 
+
+    private void createKeyCondition(PlayerActionStats.KeyCondition keyCondition, String columnName, List<String> conditions, List<StatementArgumentSetter> conditionArgs) {
+        if ("contains".equalsIgnoreCase(keyCondition.getType())) {
+            String valList = keyCondition.args().stream().map(s -> "?").collect(Collectors.joining(","));
+            conditions.add("`" + columnName + "` in (" + valList + ")");
+            for (String arg : keyCondition.args()) {
+                conditionArgs.add((stmt, idx) -> stmt.setString(idx, arg));
+            }
+
+        } else if ("match".equalsIgnoreCase(keyCondition.getType())) {
+            conditions.add("`" + columnName + "` = ?");
+            conditionArgs.add((stmt, idx) -> stmt.setString(idx, keyCondition.args().iterator().next()));
+
+        } else if ("null".equalsIgnoreCase(keyCondition.getType())) {
+            conditions.add("`" + columnName + "` IS NULL");
+
+        } else if ("not_null".equalsIgnoreCase(keyCondition.getType())) {
+            conditions.add("`" + columnName + "` IS NOT NULL");
+
+        } else if (!"any".equalsIgnoreCase(keyCondition.getType())) {
+            throw new IllegalArgumentException("Unknown key condition type: " + keyCondition.getType());
+        }
+    }
 
     interface StatementArgumentSetter {
         void set(PreparedStatement statement, int index) throws SQLException;

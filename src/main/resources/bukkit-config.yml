@@ -1,0 +1,14 @@
+
+stats:
+  mythicmobs_killed_skeleton_king:  # stats type
+    action: mythicmobs_killed_mob  # action type
+    mob: "SkeletonKing"
+    # DB key1, key2, key3 を 変換する
+
+badges:
+  mythic_skeleton_kill:  # badge id
+    name: "&6Skeleton Kills"  # GUI等での表示名
+    description: "Kill skeleton"  # GUI等での説明文
+    title: ""  # ネームタグやサイドボードでの表示
+    stats: mythicmobs_killed_mob  # stats type
+    stats_value: 10

@@ -1,19 +1,65 @@
-package com.gmail.necnionch.myplugin.statbadge.bukkit.action;
+package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
+import org.bukkit.NamespacedKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.*;
 
-public record PlayerAction(
-        UUID player,
-        ActionType type,
-        Instant time,
-        long value,
-        @Nullable String key1,
-        @Nullable String key2,
-        @Nullable String key3
-) {
+/**
+ * プレイヤーの行動を返すクラス<br>
+ * 統計をStatBadgeで集計する時に必要
+ */
+public class PlayerAction {
+
+    private final UUID player;
+    private final NamespacedKey type;
+    private final Instant time;
+    private final @Nullable String key1;
+    private final @Nullable String key2;
+    private final @Nullable String key3;
+    private final long value;
+
+    public PlayerAction(UUID playerId, NamespacedKey actionType, Instant time, @Nullable String key1, @Nullable String key2, @Nullable String key3, long value) {
+        this.player = playerId;
+        this.type = actionType;
+        this.time = time;
+        this.key1 = key1;
+        this.key2 = key2;
+        this.key3 = key3;
+        this.value = value;
+    }
+
+    public UUID getPlayer() {
+        return player;
+    }
+
+    public NamespacedKey getType() {
+        return type;
+    }
+
+    public Instant getTime() {
+        return time;
+    }
+
+    public @Nullable String getKey1() {
+        return key1;
+    }
+
+    public @Nullable String getKey2() {
+        return key2;
+    }
+
+    public @Nullable String getKey3() {
+        return key3;
+    }
+
+    public long getValue() {
+        return value;
+    }
+
+
+
 
     public static Filter.Builder filter() {
         return new Filter.Builder();
@@ -137,5 +183,6 @@ public record PlayerAction(
         }
 
     }
+
 
 }

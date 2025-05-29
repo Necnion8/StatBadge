@@ -4,22 +4,29 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 public class Badge<S extends PlayerStats> {
 
+    private final String id;
     private final UUID player;
     private final S stats;
     private final @Nullable Instant startTime;
     private @Nullable Instant completeTime;
     private final long actionTargetValue;
 
-    public Badge(UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, long actionTargetValue) {
+    public Badge(String id, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, long actionTargetValue) {
+        this.id = id;
         this.player = player;
         this.stats = stats;
         this.startTime = startTime;
         this.completeTime = completeTime;
         this.actionTargetValue = actionTargetValue;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public UUID getPlayer() {
@@ -49,6 +56,10 @@ public class Badge<S extends PlayerStats> {
 
     public boolean isCompleted() {
         return completeTime != null;  // 未来の値だったら未達成と見なす？
+    }
+
+
+    public record Partial(UUID player, String id, Optional<Long> startTime, Optional<Long> completeTime) {
     }
 
 }

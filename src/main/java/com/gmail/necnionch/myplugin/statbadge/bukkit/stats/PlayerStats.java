@@ -1,7 +1,5 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
-import org.bukkit.NamespacedKey;
-
 import java.util.UUID;
 
 /**
@@ -10,11 +8,11 @@ import java.util.UUID;
  */
 public class PlayerStats {
 
-    private final NamespacedKey type;
+    private final StatsType type;
     private final UUID player;
     private long value;
 
-    public PlayerStats(UUID playerId, NamespacedKey statsType, long value) {
+    public PlayerStats(UUID playerId, StatsType statsType, long value) {
         this.player = playerId;
         this.type = statsType;
         this.value = value;
@@ -24,7 +22,7 @@ public class PlayerStats {
         return player;
     }
 
-    public NamespacedKey getType() {
+    public StatsType getType() {
         return type;
     }
 

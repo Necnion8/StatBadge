@@ -7,6 +7,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface StatBadgeDatabase {
 
@@ -21,9 +24,12 @@ public interface StatBadgeDatabase {
 
     void addActions(Iterable<PlayerAction> actions) throws SQLException;
 
+    void addBadges(List<Badge<?>> badges) throws SQLException;
+
     List<PlayerActionStats> getActionStats(@Nullable PlayerAction.Filter filter) throws SQLException;
 
     <AS extends PlayerActionStats> void loadActionStatsTo(Badge<AS> badge) throws SQLException;
 
+    Map<String, Badge.Partial> loadPlayerBadges(UUID player, Set<String> ids) throws SQLException;
 
 }

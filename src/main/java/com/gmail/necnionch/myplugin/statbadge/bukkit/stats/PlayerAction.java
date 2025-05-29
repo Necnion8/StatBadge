@@ -1,6 +1,5 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
-import org.bukkit.NamespacedKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -13,14 +12,14 @@ import java.util.*;
 public class PlayerAction {
 
     private final UUID player;
-    private final NamespacedKey type;
+    private final ActionType type;
     private final Instant time;
     private final @Nullable String key1;
     private final @Nullable String key2;
     private final @Nullable String key3;
     private final long value;
 
-    public PlayerAction(UUID playerId, NamespacedKey actionType, Instant time, @Nullable String key1, @Nullable String key2, @Nullable String key3, long value) {
+    public PlayerAction(UUID playerId, ActionType actionType, Instant time, @Nullable String key1, @Nullable String key2, @Nullable String key3, long value) {
         this.player = playerId;
         this.type = actionType;
         this.time = time;
@@ -34,7 +33,7 @@ public class PlayerAction {
         return player;
     }
 
-    public NamespacedKey getType() {
+    public ActionType getType() {
         return type;
     }
 

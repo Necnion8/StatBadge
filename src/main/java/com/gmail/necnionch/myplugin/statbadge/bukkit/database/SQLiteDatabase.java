@@ -9,10 +9,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SQLiteDatabase implements StatBadgeDatabase {
@@ -119,7 +117,6 @@ public class SQLiteDatabase implements StatBadgeDatabase {
 
             sql = "CREATE TABLE IF NOT EXISTS `player_badges` (" +
                     "`player` VARCHAR(36) NOT NULL," +
-                    "`plugin` TEXT NOT NULL," +
                     "`id` TEXT NOT NULL," +
                     "`start_time` BIGINT," +
                     "`complete_time` BIGINT," +
@@ -131,10 +128,9 @@ public class SQLiteDatabase implements StatBadgeDatabase {
         }
     }
 
-
     @Override
     public void addActions(Iterable<PlayerAction> actions) throws SQLException {
-        String sql = "INSERT INTO `player_actions` VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT OR REPLACE INTO `player_actions` VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnectionTry();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -147,6 +143,22 @@ public class SQLiteDatabase implements StatBadgeDatabase {
                 stmt.setString(6, action.getKey2());
                 stmt.setString(7, action.getKey3());
                 stmt.setLong(8, action.getValue());
+                stmt.executeUpdate();
+            }
+        }
+    }
+
+    @Override
+    public void addBadges(List<Badge<?>> badges) throws SQLException {
+        String sql = "INSERT OR REPLACE INTO `player_badges` VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnectionTry();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (Badge<?> badge : badges) {
+                stmt.setString(1, badge.getPlayer().toString());
+                stmt.setString(2, badge.getId());
+                stmt.setLong(3, Optional.ofNullable(badge.getStartTime()).map(Instant::toEpochMilli).orElse(0L));
+                stmt.setLong(4, Optional.ofNullable(badge.getCompleteTime()).map(Instant::toEpochMilli).orElse(0L));
                 stmt.executeUpdate();
             }
         }
@@ -231,8 +243,8 @@ public class SQLiteDatabase implements StatBadgeDatabase {
 
         conditions.add("`player` = ? AND `plugin` = ? AND `type` = ?");
         conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getPlayer().toString()));
-        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getType().getNamespace()));
-        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getType().getKey()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getActionType().getNamespace()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getActionType().getKey()));
 
         Optional.ofNullable(badge.getStartTime()).ifPresent(time -> {
             conditions.add("? <= `time`");
@@ -248,7 +260,7 @@ public class SQLiteDatabase implements StatBadgeDatabase {
         createKeyCondition(badge.getStats().getKeyCondition2(), "key2", conditions, conditionArgs);
         createKeyCondition(badge.getStats().getKeyCondition3(), "key3", conditions, conditionArgs);
 
-        sql += " WHEN " + String.join(" AND ", conditions);
+        sql += " WHERE " + String.join(" AND ", conditions);
 
         try (Connection conn = getConnectionTry();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -261,8 +273,37 @@ public class SQLiteDatabase implements StatBadgeDatabase {
             try (ResultSet resultSet = stmt.executeQuery()) {
                 if (resultSet.next()) {
                     long value = resultSet.getLong(8);
+                    System.out.println(value);
                     badge.getStats().setValue(badge.getStats().getValue() + value);
                 }
+            }
+        }
+    }
+
+    @Override
+    public Map<String, Badge.Partial> loadPlayerBadges(UUID player, Set<String> ids) throws SQLException {
+        String sql = "SELECT `player`, `id`, `start_time`, `complete_time` FROM `player_badges` WHERE `player` = ?";
+        sql += "AND `id` in (" + ids.stream().map(s -> "?").collect(Collectors.joining(",")) + ")";
+
+        try (Connection conn = getConnectionTry();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, player.toString());
+            int i = 1;
+            for (String id : ids) {
+                stmt.setString(++i, id);
+            }
+
+            try (ResultSet resultSet = stmt.executeQuery()) {
+                Map<String, Badge.Partial> badges = new HashMap<>();
+                while (resultSet.next()) {
+                    String id = resultSet.getString(2);
+                    long v = resultSet.getLong(3);
+                    Optional<Long> startTime = v != 0 ? Optional.of(v) : Optional.empty();
+                    v = resultSet.getLong(4);
+                    Optional<Long> completeTime = v != 0 ? Optional.of(v) : Optional.empty();
+                    badges.put(id, new Badge.Partial(player, id, startTime, completeTime));
+                }
+                return badges;
             }
         }
     }

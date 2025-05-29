@@ -1,10 +1,13 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
-import org.bukkit.NamespacedKey;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * 統計値を返すクラス<br>
@@ -12,18 +15,17 @@ import java.util.UUID;
  */
 public abstract class PlayerActionStats extends PlayerStats {
 
-    private final NamespacedKey actionType;
+    public static final StatsType STATS_TYPE = new StatsType(JavaPlugin.getProvidingPlugin(StatBadgePlugin.class), "action");
+    private final ActionType actionType;
 
-    public PlayerActionStats(UUID playerId, NamespacedKey statsType, NamespacedKey actionType, long value) {
-        super(playerId, statsType, value);
+    public PlayerActionStats(UUID playerId, ActionType actionType, long value) {
+        super(playerId, STATS_TYPE, value);
         this.actionType = actionType;
     }
 
-    public NamespacedKey getActionType() {
+    public ActionType getActionType() {
         return actionType;
     }
-
-    public abstract boolean matchAction(PlayerAction action);
 
     public abstract KeyCondition getKeyCondition1();
 
@@ -34,16 +36,18 @@ public abstract class PlayerActionStats extends PlayerStats {
 
     public static final class KeyCondition {
 
-        public static final KeyCondition NULL = new KeyCondition("null", Collections.emptySet());
-        public static final KeyCondition NOT_NULL = new KeyCondition("not_null", Collections.emptySet());
-        public static final KeyCondition ANY = new KeyCondition("any", Collections.emptySet());
+        public static final KeyCondition NULL = new KeyCondition("null", Collections.emptySet(), Objects::isNull);
+        public static final KeyCondition NOT_NULL = new KeyCondition("not_null", Collections.emptySet(), Objects::nonNull);
+        public static final KeyCondition ANY = new KeyCondition("any", Collections.emptySet(), s -> true);
 
         private final String type;
         private final Collection<String> args;
+        private final Predicate<String> test;
 
-        private KeyCondition(String type, Collection<String> args) {
+        private KeyCondition(String type, Collection<String> args, Predicate<String> test) {
             this.type = type;
             this.args = args;
+            this.test = test;
         }
 
         public String getType() {
@@ -54,12 +58,16 @@ public abstract class PlayerActionStats extends PlayerStats {
             return args;
         }
 
+        public boolean test(String value) {
+            return test.test(value);
+        }
+
         public static KeyCondition match(String key) {
-            return new KeyCondition("match", Collections.singleton(key));
+            return new KeyCondition("match", Collections.singleton(key), s -> s.equals(key));
         }
 
         public static KeyCondition contains(Collection<String> keys) {
-            return new KeyCondition("contains", keys);
+            return new KeyCondition("contains", keys, keys::contains);
         }
     }
 

@@ -27,4 +27,10 @@ public class StatsType {
     public String toString() {
         return type.toString();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj) || (obj instanceof StatsType && type.equals(((StatsType) obj).type));
+    }
+
 }

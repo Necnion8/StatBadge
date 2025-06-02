@@ -6,3 +6,11 @@ authors: [Necnion8]
 website: https://github.com/Necnion8/StatBadge
 
 softdepend: [MythicMobs, Lands]
+
+commands:
+  statbadge:
+    permission: statbadge.command.statbadge
+
+permissions:
+  statbadge.command.statbadge:
+    default: op

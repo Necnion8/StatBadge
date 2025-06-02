@@ -9,7 +9,7 @@ public record StatsEntry(
 ) {
 
     public static StatsEntry parse(String id, ConfigurationSection config) {
-        return new StatsEntry(id, config.getString("type"), config);
+        return new StatsEntry(id, config.getString("type", "action"), config);
     }
 
 }

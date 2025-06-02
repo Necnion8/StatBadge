@@ -4,6 +4,10 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerActionEvent;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeCompleteEvent;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeValueChangeEvent;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerStatsEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.LandsHook;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.MythicMobsHook;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.PluginHook;
@@ -12,6 +16,9 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStatsProvider;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobEventListener;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -45,6 +52,10 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final Map<String, Supplier<PluginHook>> pluginHooks = new HashMap<>();
     private final List<PluginHook> hookedPlugins = new ArrayList<>();
 
+    public static StatManager getStatManager() {
+        return Objects.requireNonNull(getPlugin(StatBadgePlugin.class).statManager, "StatManager not initialized");
+    }
+
     @Override
     public void onEnable() {
         config.load();
@@ -70,7 +81,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     public void onDisable() {
         unhookPlugins();
 
-        try {
+        try {  // TODO: fix null
             statManager.commitAndUnloadAll().get();
             database.closeConnection();
         } catch (Exception e) {
@@ -80,6 +91,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void setupDefaultStats() {
+        StatManager statManager = getStatManager();
         statManager.addPlayerActionStatsProvider(actionEntityKilled, new PlayerActionStatsProvider(this) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
@@ -110,6 +122,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void setupHookPlugins() {
+        StatManager statManager = getStatManager();
         pluginHooks.clear();
         pluginHooks.put("MythicMobs", () -> new MythicMobsHook("MythicMobs", getLogger(), statManager));
         pluginHooks.put("Lands", () -> new LandsHook("Lands", getLogger(), statManager));
@@ -144,7 +157,8 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void loadPlayer(Player player) {
-        statManager.loadPlayer(player.getUniqueId()).thenAccept(result -> {
+        StatManager statManager = getStatManager();
+        statManager.loadPlayer(player).thenAccept(result -> {
             if (result) {
                 List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
                 getLogger().warning("Loaded " + badges.size() + " player badges: " + player.getName());
@@ -152,11 +166,25 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                     System.out.println("- " + badge);
                 }
             }
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            return null;
         });
     }
 
     private void unloadPlayer(Player player) {
-        statManager.commitAndUnloadPlayer(player.getUniqueId());
+        getStatManager().unloadPlayer(player);
+    }
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        StatManager statManager = getStatManager();
+        if (1 <= args.length && "list".equalsIgnoreCase(args[0])) {
+            Player player = (Player) sender;
+            List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
+            badges.forEach(b -> player.sendMessage(b.toString()));
+        }
+        return true;
     }
 
     // interface
@@ -177,12 +205,13 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     @Override
-    public BukkitTask runTaskAsynchronously(Runnable task) {
-        return getServer().getScheduler().runTaskAsynchronously(this, task);
+    public BukkitTask runTask(Runnable task) {
+        return getServer().getScheduler().runTask(this, task);
     }
 
     @Override
     public <E extends Event> E callEvent(E event) {
+        getServer().getPluginManager().callEvent(event);
         return event;
     }
 
@@ -207,6 +236,35 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                 hook.unhook();
             }
         }
+    }
+
+
+    // test
+
+    @EventHandler
+    public void onBadgeValue(PlayerBadgeValueChangeEvent event) {
+        Player player = event.getPlayer();
+        player.sendMessage(ChatColor.DARK_AQUA + "onBadgeValueChange -> " + event.getBadge().getId() + " "
+                + ChatColor.DARK_PURPLE + event.getOldValue() + ChatColor.WHITE + " -> " + ChatColor.LIGHT_PURPLE + event.getNewValue());
+    }
+
+    @EventHandler
+    public void onBadgeComplete(PlayerBadgeCompleteEvent event) {
+        Player player = event.getPlayer();
+        player.sendMessage(ChatColor.DARK_AQUA + "onBadgeComplete -> " + event.getBadge().getId() + " "
+                + ChatColor.LIGHT_PURPLE + event.getBadge().getStats().getValue() + " " + ChatColor.WHITE + event.getBadge().getCompleteTime());
+    }
+
+    @EventHandler
+    public void onAction(PlayerActionEvent event) {
+        Player player = event.getPlayer();
+        player.sendMessage(ChatColor.DARK_RED + "onAction -> " + event.getAction().getType() + ChatColor.GRAY + " " + event.getAction().getKey1() + ", " + event.getAction().getKey2() + ", " + event.getAction().getKey3());
+    }
+
+    @EventHandler
+    public void onStats(PlayerStatsEvent event) {
+        Player player = event.getPlayer();
+        player.sendMessage(ChatColor.DARK_RED + "onStats -> " + event.getType() + ChatColor.GRAY + " " + event.getValue() + " (" + event.getTime() + ")");
     }
 
 }

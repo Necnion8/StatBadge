@@ -120,7 +120,7 @@ public class SQLiteDatabase implements StatBadgeDatabase {
                     "`id` TEXT NOT NULL," +
                     "`start_time` BIGINT," +
                     "`complete_time` BIGINT," +
-                    "UNIQUE (`player`, `plugin`, `id`)" +
+                    "UNIQUE (`player`, `id`)" +
                     ");";
             try (Statement stmt = connection.createStatement()) {
                 stmt.executeUpdate(sql);

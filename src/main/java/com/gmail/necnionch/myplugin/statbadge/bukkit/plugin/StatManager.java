@@ -5,8 +5,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeCompleteEvent;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeValueChangeEvent;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -46,7 +45,7 @@ public class StatManager {
     }
 
 
-    public CompletableFuture<Void> commitAll() {
+    private CompletableFuture<Void> commitAll() {
         return CompletableFuture.supplyAsync(() -> {
             commitCachedActions();
             commitPlayerBadges();
@@ -101,31 +100,47 @@ public class StatManager {
                 .toList();
     }
 
-    public CompletableFuture<Boolean> loadPlayer(UUID player) {
-        return loadPlayerBadges(player).handle((badges, throwable) -> {
+    /**
+     * プレイヤーの統計とバッジをロードします。<br>
+     * 既に目標値に達している未処理バッジに対してバッジの達成処理が実行されます。
+     */
+    public CompletableFuture<Boolean> loadPlayer(Player player) {
+        return loadPlayerBadges(player.getUniqueId()).handleAsync((badges, throwable) -> {
             if (throwable != null) {
-                getLogger().log(Level.SEVERE, "Exception in load player: " + player, throwable);
+                getLogger().log(Level.SEVERE, "Exception in load player: " + player.getUniqueId(), throwable);
                 return false;
             } else {
-                getLogger().info("Loaded " + player + "'s badge " + badges.size());
+                getLogger().info("Loaded " + player.getUniqueId() + "'s badge " + badges.size());
+
+                plugin.callEvent(new PlayerBadgeLoadEvent(player, badges));
+
+                Instant now = Instant.now();
+                badges.forEach(b -> processBadgeValueComplete(player, b, now));
                 return true;
             }
-        });
+        }, plugin::runTask);
     }
 
-    public CompletableFuture<Boolean> commitAndUnloadPlayer(UUID player) {
+    /**
+     * プレイヤーのバッジをコミットしてアンロードします
+     */
+    public CompletableFuture<Boolean> unloadPlayer(Player player) {
+        List<Badge<?>> badges;
+        synchronized (lock) {
+            badges = playerBadges.stream().filter(b -> b.getPlayer().equals(player.getUniqueId())).toList();
+            playerBadges.removeAll(badges);
+        }
+
+        plugin.callEvent(new PlayerBadgeUnloadEvent(player, badges));
+        if (badges.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             try {
-                List<Badge<?>> badges;
-                synchronized (lock) {
-                    badges = playerBadges.stream().filter(b -> b.getPlayer().equals(player)).toList();
-                    if (badges.isEmpty())
-                        return true;
-                    playerBadges.removeAll(badges);
-                }
                 database.addBadges(badges);
             } catch (SQLException e) {
-                getLogger().log(Level.SEVERE, "Exception in unload player: " + player, e);
+                getLogger().log(Level.SEVERE, "Exception in unload player: " + player.getUniqueId(), e);
                 throw new RuntimeException(e);
             }
             return true;
@@ -221,7 +236,7 @@ public class StatManager {
                 try {
                     playerStats = createPlayerStats(player, statsEntry).orElse(null);
                 } catch (Throwable e) {
-                    e.printStackTrace();
+                    e.printStackTrace();  // TODO: error handling
                     return;
                 }
 
@@ -267,6 +282,8 @@ public class StatManager {
     // main use
 
     public void addAction(Player player, PlayerAction action) {
+        plugin.callEvent(new PlayerActionEvent(player, action));
+
         synchronized (lock) {
             actionCached.add(action);
             // queue timer
@@ -276,32 +293,27 @@ public class StatManager {
         }
 
         for (Badge<?> badge : playerBadges) {
-            if (!badge.isCompleted() && validBadgeAction(badge, action)) {
+            if (isCompletableBadge(badge, action.getTime()) && matchBadgeAction(badge, action)) {
                 changeBadgeValue(player, badge, badge.getStats().getValue() + action.getValue(), action.getTime());
             }
         }
     }
 
-    public void changeStats(Player player, PlayerStats stats, @Nullable Instant statsTime) {
+    public void changeStats(Player player, StatsType type, @Nullable Instant statsTime, long value) {
         if (statsTime == null)
             statsTime = Instant.now();
+
+        plugin.callEvent(new PlayerStatsEvent(player, type, statsTime, value));
+
         for (Badge<?> badge : playerBadges) {
-            if (!badge.isCompleted() && validBadgeStats(badge, stats, statsTime)) {
-                changeBadgeValue(player, badge, stats.getValue(), statsTime);
+            if (isCompletableBadge(badge, statsTime) && matchBadgeStats(badge, player.getUniqueId(), type)) {
+                changeBadgeValue(player, badge, value, statsTime);
             }
         }
     }
 
-    public void changeStats(Player player, PlayerStats stats) {
-        changeStats(player, stats, null);
-    }
-
-    public boolean validBadgeAction(Badge<?> badge, PlayerAction action) {
+    public boolean matchBadgeAction(Badge<?> badge, PlayerAction action) {
         if (!badge.getPlayer().equals(action.getPlayer()))
-            return false;
-
-        Instant startTime = badge.getStartTime();
-        if (startTime != null && startTime.isAfter(action.getTime()))
             return false;
 
         if (!(badge.getStats() instanceof PlayerActionStats stats))
@@ -313,15 +325,12 @@ public class StatManager {
         return stats.getKeyCondition1().test(action.getKey1()) && stats.getKeyCondition2().test(action.getKey2()) && stats.getKeyCondition3().test(action.getKey3());
     }
 
-    public boolean validBadgeStats(Badge<?> badge, PlayerStats stats, Instant statsTime) {
-        if (!badge.getStats().equals(stats))
-            return false;
+    public boolean matchBadgeStats(Badge<?> badge, UUID player, StatsType statsType) {
+        return badge.getStats().getType().equals(statsType) && badge.getPlayer().equals(player);
+    }
 
-        if (!badge.getPlayer().equals(stats.getPlayer()))
-            return false;
-
-        Instant startTime = badge.getStartTime();
-        return startTime == null || !startTime.isAfter(statsTime);
+    public boolean isCompletableBadge(Badge<?> badge, Instant time) {
+        return !badge.isCompleted() && (badge.getStartTime() == null || !badge.getStartTime().isAfter(time));
     }
 
     /**
@@ -331,7 +340,11 @@ public class StatManager {
         long oldValue = badge.getStats().getValue();
         badge.getStats().setValue(value);
         plugin.callEvent(new PlayerBadgeValueChangeEvent(player, badge, value, oldValue));
-        if (badge.isCompleted() || value < badge.getActionTargetValue())
+        processBadgeValueComplete(player, badge, time);
+    }
+
+    private void processBadgeValueComplete(Player player, Badge<?> badge, Instant time) {
+        if (badge.isCompleted() || badge.getStats().getValue() < badge.getActionTargetValue())
             return;
 
         badge.setCompleteTime(time);

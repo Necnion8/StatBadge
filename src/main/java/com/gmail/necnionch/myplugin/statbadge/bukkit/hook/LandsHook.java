@@ -6,26 +6,27 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
 import me.angeschossen.lands.api.LandsIntegration;
 import me.angeschossen.lands.api.events.ChunkPostClaimEvent;
 import me.angeschossen.lands.api.events.LandCreateEvent;
+import me.angeschossen.lands.api.events.player.database.PlayerDataLoadedEvent;
 import me.angeschossen.lands.api.events.war.WarEndEvent;
 import me.angeschossen.lands.api.land.Land;
 import me.angeschossen.lands.api.memberholder.MemberHolder;
+import me.angeschossen.lands.api.player.LandPlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 public class LandsHook extends PluginHook implements Listener {
 
-    private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(StatBadgePlugin.class);
+    private static final StatBadgePlugin PLUGIN = JavaPlugin.getPlugin(StatBadgePlugin.class);
     public static final StatsType STATS_LAND_CHUNKS = new StatsType(PLUGIN, "lands_chunks");
     public static final ActionType ACTION_LAND_WAR_WINS = new ActionType(PLUGIN, "lands_war_wins");
     public static final ActionType ACTION_LAND_WAR_LOSES = new ActionType(PLUGIN, "lands_war_loses");
@@ -44,7 +45,7 @@ public class LandsHook extends PluginHook implements Listener {
         stats.addPlayerStatsProvider(STATS_LAND_CHUNKS, new PlayerStatsProvider(PLUGIN) {
             @Override
             public PlayerStats create(UUID playerId, String statsId, ConfigurationSection config) {
-                return new PlayerStats(playerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(playerId));
+                return new PlayerStats(playerId, STATS_LAND_CHUNKS, getOwnLandChunkCountOrZero(playerId));
             }
         });
         stats.addPlayerActionStatsProvider(ACTION_LAND_WAR_WINS, new PlayerActionStatsProvider(PLUGIN) {
@@ -59,7 +60,7 @@ public class LandsHook extends PluginHook implements Listener {
                 return new PlayerLandWarCount(playerId, ACTION_LAND_WAR_LOSES, 0);
             }
         });
-        return false;
+        return true;
     }
 
     @Override
@@ -74,18 +75,31 @@ public class LandsHook extends PluginHook implements Listener {
     private int getOwnLandChunkCount(UUID player) {
         if (lands == null)
             throw new RuntimeException("No loaded LandsIntegration");
-        return lands.getLandPlayer(player).getLands().stream()
-                .filter(land -> player.equals(land.getOwnerUID()))
+        LandPlayer landPlayer = lands.getLandPlayer(player);
+        if (landPlayer == null)
+            throw new IllegalArgumentException("LandPlayer not loaded");
+        return getOwnLandChunkCount(landPlayer);
+    }
+
+    private int getOwnLandChunkCountOrZero(UUID player) {
+        if (lands == null)
+            return 0;
+        LandPlayer landPlayer = lands.getLandPlayer(player);
+        if (landPlayer == null)
+            return 0;
+        return getOwnLandChunkCount(landPlayer);
+    }
+
+    private int getOwnLandChunkCount(LandPlayer player) {
+        return player.getLands().stream()
+                .filter(land -> player.getUID().equals(land.getOwnerUID()))
                 .mapToInt(MemberHolder::getChunksAmount)
                 .sum();
     }
 
-    private void putPlayerStats(UUID playerId, Function<Player, PlayerStats> getter) {
-        Player player = PLUGIN.getServer().getPlayer(playerId);
-        if (player != null) {
-            PlayerStats playerStats = getter.apply(player);
-            stats.changeStats(player, playerStats);
-        }
+    private void putPlayerStats(UUID playerId, StatsType type, Supplier<Integer> action) {
+        Optional.ofNullable(PLUGIN.getServer().getPlayer(playerId))
+                .ifPresent(p -> stats.changeStats(p, type, null, action.get()));
     }
 
     private void addPlayerAction(Player player, ActionType actionType) {
@@ -95,23 +109,30 @@ public class LandsHook extends PluginHook implements Listener {
 
 
     @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        stats.changeStats(player, new PlayerStats(player.getUniqueId(), STATS_LAND_CHUNKS, getOwnLandChunkCount(player.getUniqueId())));
+    public void onLoadPlayer(PlayerDataLoadedEvent event) {
+        LandPlayer landPlayer = event.getLandPlayer();
+        Runnable task = () -> stats.changeStats(landPlayer.getPlayer(), STATS_LAND_CHUNKS, null, getOwnLandChunkCount(landPlayer));
+
+        if (event.isAsynchronous()) {
+            PLUGIN.runTask(task);
+        } else {
+            task.run();
+        }
+
     }
 
     @EventHandler
     public void onCreate(LandCreateEvent event) {
         Land land = event.getLand();
         UUID ownerId = land.getOwnerUID();
-        putPlayerStats(ownerId, p -> new PlayerStats(ownerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(ownerId)));
+        putPlayerStats(ownerId, STATS_LAND_CHUNKS, () -> getOwnLandChunkCount(ownerId));
     }
 
     @EventHandler
     public void onClaim(ChunkPostClaimEvent event) {
         Land land = event.getLand();
         UUID ownerId = land.getOwnerUID();
-        putPlayerStats(ownerId, p -> new PlayerStats(ownerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(ownerId)));
+        putPlayerStats(ownerId, STATS_LAND_CHUNKS, () -> getOwnLandChunkCount(ownerId));
     }
 
     @EventHandler

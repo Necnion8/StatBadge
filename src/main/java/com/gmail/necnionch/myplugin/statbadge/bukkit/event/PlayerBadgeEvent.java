@@ -18,7 +18,7 @@ public abstract class PlayerBadgeEvent extends Event {
         return player;
     }
 
-    public Badge getBadge() {
+    public Badge<?> getBadge() {
         return badge;
     }
 

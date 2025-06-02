@@ -68,7 +68,7 @@ public class Badge<S extends PlayerStats> {
                 + ", targetValue=" + actionTargetValue
                 + ", start=" + Optional.ofNullable(startTime).map(Instant::toString).orElse("null")
                 + ", complete=" + Optional.ofNullable(completeTime).map(Instant::toString).orElse("null")
-                + ", player=\"" + player + "\"}";
+                + "}";
     }
 
     public record Partial(UUID player, String id, Optional<Long> startTime, Optional<Long> completeTime) {

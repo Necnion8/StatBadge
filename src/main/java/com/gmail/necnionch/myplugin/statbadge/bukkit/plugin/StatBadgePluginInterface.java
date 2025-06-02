@@ -14,7 +14,7 @@ public interface StatBadgePluginInterface {
 
     BukkitTask runTaskLaterAsynchronously(Runnable task, long delay);
 
-    BukkitTask runTaskAsynchronously(Runnable task);
+    BukkitTask runTask(Runnable task);
 
     <E extends Event> E callEvent(E event);
 

@@ -1,0 +1,167 @@
+package com.gmail.necnionch.myplugin.statbadge.bukkit.hook;
+
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
+import me.angeschossen.lands.api.LandsIntegration;
+import me.angeschossen.lands.api.events.ChunkPostClaimEvent;
+import me.angeschossen.lands.api.events.LandCreateEvent;
+import me.angeschossen.lands.api.events.war.WarEndEvent;
+import me.angeschossen.lands.api.land.Land;
+import me.angeschossen.lands.api.memberholder.MemberHolder;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.logging.Logger;
+
+public class LandsHook extends PluginHook implements Listener {
+
+    private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(StatBadgePlugin.class);
+    public static final StatsType STATS_LAND_CHUNKS = new StatsType(PLUGIN, "lands_chunks");
+    public static final ActionType ACTION_LAND_WAR_WINS = new ActionType(PLUGIN, "lands_war_wins");
+    public static final ActionType ACTION_LAND_WAR_LOSES = new ActionType(PLUGIN, "lands_war_loses");
+    private LandsIntegration lands;
+
+    private final StatManager stats;
+
+    public LandsHook(String pluginName, Logger logger, StatManager stats) {
+        super(pluginName, logger);
+        this.stats = stats;
+    }
+
+    @Override
+    protected boolean onHook(Plugin plugin) {
+        lands = LandsIntegration.of(PLUGIN);
+        stats.addPlayerStatsProvider(STATS_LAND_CHUNKS, new PlayerStatsProvider(PLUGIN) {
+            @Override
+            public PlayerStats create(UUID playerId, String statsId, ConfigurationSection config) {
+                return new PlayerStats(playerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(playerId));
+            }
+        });
+        stats.addPlayerActionStatsProvider(ACTION_LAND_WAR_WINS, new PlayerActionStatsProvider(PLUGIN) {
+            @Override
+            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+                return new PlayerLandWarCount(playerId, ACTION_LAND_WAR_WINS, 0);
+            }
+        });
+        stats.addPlayerActionStatsProvider(ACTION_LAND_WAR_LOSES, new PlayerActionStatsProvider(PLUGIN) {
+            @Override
+            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+                return new PlayerLandWarCount(playerId, ACTION_LAND_WAR_LOSES, 0);
+            }
+        });
+        return false;
+    }
+
+    @Override
+    protected boolean onUnhook() {
+        stats.removePlayerStatsProvider(STATS_LAND_CHUNKS);
+        stats.removePlayerActionStatsProvider(ACTION_LAND_WAR_WINS);
+        stats.removePlayerActionStatsProvider(ACTION_LAND_WAR_LOSES);
+        lands = null;
+        return true;
+    }
+
+    private int getOwnLandChunkCount(UUID player) {
+        if (lands == null)
+            throw new RuntimeException("No loaded LandsIntegration");
+        return lands.getLandPlayer(player).getLands().stream()
+                .filter(land -> player.equals(land.getOwnerUID()))
+                .mapToInt(MemberHolder::getChunksAmount)
+                .sum();
+    }
+
+    private void putPlayerStats(UUID playerId, Function<Player, PlayerStats> getter) {
+        Player player = PLUGIN.getServer().getPlayer(playerId);
+        if (player != null) {
+            PlayerStats playerStats = getter.apply(player);
+            stats.changeStats(player, playerStats);
+        }
+    }
+
+    private void addPlayerAction(Player player, ActionType actionType) {
+        stats.addAction(player, new PlayerAction(player.getUniqueId(), actionType, Instant.now(), null, null, null, 1));
+    }
+
+
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        stats.changeStats(player, new PlayerStats(player.getUniqueId(), STATS_LAND_CHUNKS, getOwnLandChunkCount(player.getUniqueId())));
+    }
+
+    @EventHandler
+    public void onCreate(LandCreateEvent event) {
+        Land land = event.getLand();
+        UUID ownerId = land.getOwnerUID();
+        putPlayerStats(ownerId, p -> new PlayerStats(ownerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(ownerId)));
+    }
+
+    @EventHandler
+    public void onClaim(ChunkPostClaimEvent event) {
+        Land land = event.getLand();
+        UUID ownerId = land.getOwnerUID();
+        putPlayerStats(ownerId, p -> new PlayerStats(ownerId, STATS_LAND_CHUNKS, getOwnLandChunkCount(ownerId)));
+    }
+
+    @EventHandler
+    public void onWarEnd(WarEndEvent event) {
+        System.out.println("onWarEnd");  // TODO: test log
+
+        MemberHolder winner = event.getWinner();
+        MemberHolder loser = event.getLoser();
+
+        Optional.ofNullable(winner).ifPresent(memberHolder -> {
+            System.out.println("winner: " + memberHolder + " / " + memberHolder.getOwnerUID());
+        });
+        Optional.ofNullable(loser).ifPresent(memberHolder -> {
+            System.out.println("loser: " + memberHolder + " / " + memberHolder.getOwnerUID());
+        });
+
+        if (winner != null) {
+            for (Player player : winner.getOnlinePlayers()) {
+                addPlayerAction(player, ACTION_LAND_WAR_WINS);
+            }
+        }
+        if (loser != null) {
+            for (Player player : loser.getOnlinePlayers()) {
+                addPlayerAction(player, ACTION_LAND_WAR_LOSES);
+            }
+        }
+
+    }
+
+
+    public static class PlayerLandWarCount extends PlayerActionStats {
+        public PlayerLandWarCount(UUID playerId, ActionType sourceActionType, long value) {
+            super(playerId, sourceActionType, value);
+        }
+
+        @Override
+        public KeyCondition getKeyCondition1() {
+            return KeyCondition.ANY;
+        }
+
+        @Override
+        public KeyCondition getKeyCondition2() {
+            return KeyCondition.ANY;
+        }
+
+        @Override
+        public KeyCondition getKeyCondition3() {
+            return KeyCondition.ANY;
+        }
+    }
+
+
+}

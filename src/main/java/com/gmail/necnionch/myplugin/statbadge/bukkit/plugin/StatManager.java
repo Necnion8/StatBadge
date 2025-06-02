@@ -9,6 +9,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeCompleteEv
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeValueChangeEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class StatManager {
 
@@ -28,7 +30,7 @@ public class StatManager {
     private @Nullable BukkitTask commitTimerTask;
     private final List<PlayerAction> actionCached = new ArrayList<>();
     //
-    private final List<Badge<?>> playerBadges = new ArrayList<>();
+    private final List<Badge<?>> playerBadges = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, PlayerStatsProvider> playerStatsProviders = new HashMap<>();
     private final Map<String, PlayerActionStatsProvider> playerActionStatsProviders = new HashMap<>();
 
@@ -44,9 +46,20 @@ public class StatManager {
     }
 
 
-    public void commitAll() {
-        commitCachedActions();
-        commitPlayerBadges();
+    public CompletableFuture<Void> commitAll() {
+        return CompletableFuture.supplyAsync(() -> {
+            commitCachedActions();
+            commitPlayerBadges();
+            return null;
+        });
+    }
+
+    public CompletableFuture<Void> commitAndUnloadAll() {
+        return commitAll().handle((u, e) -> {
+            actionCached.clear();
+            playerBadges.clear();
+            return null;
+        });
     }
 
     private void commitCachedActions() {
@@ -78,15 +91,56 @@ public class StatManager {
         }
     }
 
+    public Set<UUID> getPlayerBadgesPlayerIds() {
+        return playerBadges.stream().map(Badge::getPlayer).collect(Collectors.toUnmodifiableSet());
+    }
+
+    public List<Badge<?>> getPlayerBadges(UUID player) {
+        return playerBadges.stream()
+                .filter(b -> b.getPlayer().equals(player))
+                .toList();
+    }
+
+    public CompletableFuture<Boolean> loadPlayer(UUID player) {
+        return loadPlayerBadges(player).handle((badges, throwable) -> {
+            if (throwable != null) {
+                getLogger().log(Level.SEVERE, "Exception in load player: " + player, throwable);
+                return false;
+            } else {
+                getLogger().info("Loaded " + player + "'s badge " + badges.size());
+                return true;
+            }
+        });
+    }
+
+    public CompletableFuture<Boolean> commitAndUnloadPlayer(UUID player) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<Badge<?>> badges;
+                synchronized (lock) {
+                    badges = playerBadges.stream().filter(b -> b.getPlayer().equals(player)).toList();
+                    if (badges.isEmpty())
+                        return true;
+                    playerBadges.removeAll(badges);
+                }
+                database.addBadges(badges);
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Exception in unload player: " + player, e);
+                throw new RuntimeException(e);
+            }
+            return true;
+        });
+    }
+
+    // providers
 
     public Optional<PlayerStatsProvider> getPlayerStatsProvider(StatsType type) {
-        return Optional.ofNullable(playerStatsProviders.get(type.toString()));
+        return getPlayerStatsProvider(type.toString());
     }
 
     public Optional<PlayerActionStatsProvider> getPlayerActionStatsProvider(ActionType type) {
-        return Optional.ofNullable(playerActionStatsProviders.get(type.toString()));
+        return getPlayerActionStatsProvider(type.toString());
     }
-
 
     private Optional<PlayerStatsProvider> getPlayerStatsProvider(String statsType) {
         return Optional.ofNullable(playerStatsProviders.get(statsType));
@@ -95,7 +149,6 @@ public class StatManager {
     private Optional<PlayerActionStatsProvider> getPlayerActionStatsProvider(String actionType) {
         return Optional.ofNullable(playerActionStatsProviders.get(actionType));
     }
-
 
     public void addPlayerStatsProvider(StatsType type, PlayerStatsProvider provider) {
         if (playerStatsProviders.containsKey(type.toString()))
@@ -117,8 +170,14 @@ public class StatManager {
         return playerActionStatsProviders.remove(type.toString());
     }
 
+    public void removeProviders(Plugin plugin) {
+        playerStatsProviders.values().removeIf(p -> p.getPlugin().equals(plugin));
+        playerActionStatsProviders.values().removeIf(p -> p.getPlugin().equals(plugin));
+    }
 
-    public Optional<PlayerStats> createPlayerStats(UUID player, StatsEntry entry) {
+    //
+
+    private Optional<PlayerStats> createPlayerStats(UUID player, StatsEntry entry) {
         String statsType = completeAliasedType(entry.type());
         if (statsType.equals(PlayerActionStats.STATS_TYPE.toString()))
             return createPlayerActionStats(player, entry).map(s -> s);
@@ -126,40 +185,29 @@ public class StatManager {
                 .map(p -> p.create(player, entry.id(), entry.config()));
     }
 
-    public Optional<PlayerActionStats> createPlayerActionStats(UUID player, StatsEntry entry) {
+    private Optional<PlayerActionStats> createPlayerActionStats(UUID player, StatsEntry entry) {
         String actionType = completeAliasedType(Objects.requireNonNull(entry.config().getString("action"), "Required 'action' type"));
         return getPlayerActionStatsProvider(actionType)
                 .map(p -> p.create(player, entry.id(), entry.config()));
     }
 
-
-
-    public List<Badge<?>> getPlayerBadges(UUID player) {
-        return playerBadges.stream()
-                .filter(b -> b.getPlayer().equals(player))
-                .toList();
-    }
-
-    public CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
+    private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
         if (config.badges().isEmpty()) {
             playerBadges.clear();
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
 
-        CompletableFuture<Map<String, Badge.Partial>> future = new CompletableFuture<>();
-
         Map<String, BadgeEntry> configBadges = new HashMap<>(config.badges());
 
-        plugin.runTaskAsynchronously(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                future.complete(database.loadPlayerBadges(player, configBadges.keySet()));
-            } catch (Throwable e) {
-                future.completeExceptionally(e);
+                commitCachedActions();
+                return database.loadPlayerBadges(player, configBadges.keySet());
+            } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Exception in load player badges", e);
+                throw new RuntimeException(e);
             }
-        });
-
-        return future.thenApply(partials -> {
+        }).thenApply(partials -> {
             List<Badge<?>> badges = new ArrayList<>();
 
             configBadges.forEach((id, badgeEntry) -> {
@@ -169,43 +217,54 @@ public class StatManager {
                     return;
                 }
 
-                PlayerStats playerStats = createPlayerStats(player, statsEntry).orElse(null);
+                PlayerStats playerStats;
+                try {
+                    playerStats = createPlayerStats(player, statsEntry).orElse(null);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    return;
+                }
+
                 if (playerStats == null) {
-                    getLogger().warning("Unable to init stats: " + statsEntry.type() + ": No provider");
+                    if (completeAliasedType(statsEntry.type()).equals(PlayerActionStats.STATS_TYPE.toString())) {
+                        getLogger().warning("Unable to init action stats: " + statsEntry.config().getString("action") + ": No provider");
+                    } else {
+                        getLogger().warning("Unable to init stats: " + statsEntry.type() + ": No provider");
+                    }
                     return;
                 }
 
                 Badge.Partial partial = partials.get(id);
+                Badge<?> badge;
                 if (partial != null) {
                     Instant startTime = partial.startTime().map(Instant::ofEpochMilli).orElse(null);
                     Instant completeTime = partial.completeTime().map(Instant::ofEpochMilli).orElse(null);
-                    badges.add(new Badge<>(badgeEntry.id(), player, playerStats, startTime, completeTime, badgeEntry.statsValue()));
-                } else {
-                    badges.add(new Badge<>(badgeEntry.id(), player, playerStats, Instant.now(), null, badgeEntry.statsValue()));
-                }
-                // TODO: check value target
-            });
-            return badges;
+                    badge = new Badge<>(badgeEntry.id(), player, playerStats, startTime, completeTime, badgeEntry.statsValue());
 
-        }).thenApply(badges -> {
+                    if (playerStats instanceof PlayerActionStats) {
+                        try {
+                            //noinspection unchecked
+                            database.loadActionStatsTo((Badge<PlayerActionStats>) badge);
+                        } catch (SQLException e) {
+                            getLogger().log(Level.SEVERE, "Exception in load player actions", e);
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                } else {
+                    badge = new Badge<>(badgeEntry.id(), player, playerStats, Instant.now(), null, badgeEntry.statsValue());
+                }
+
+                badges.add(badge);
+            });
+
             this.playerBadges.removeIf(b -> b.getPlayer().equals(player));
             this.playerBadges.addAll(badges);
-            return badges;
-        }).thenApplyAsync(badges -> {
-            for (Badge<?> badge : badges) {
-                if (badge.getStats() instanceof PlayerActionStats) {
-                    try {
-                        //noinspection unchecked
-                        database.loadActionStatsTo((Badge<PlayerActionStats>) badge);
-                    } catch (SQLException e) {
-                        e.printStackTrace();  // TODO: handle exception
-                    }
-                }
-            }
             return badges;
         });
     }
 
+    // main use
 
     public void addAction(Player player, PlayerAction action) {
         synchronized (lock) {
@@ -217,7 +276,7 @@ public class StatManager {
         }
 
         for (Badge<?> badge : playerBadges) {
-            if (validBadgeAction(badge, action)) {
+            if (!badge.isCompleted() && validBadgeAction(badge, action)) {
                 changeBadgeValue(player, badge, badge.getStats().getValue() + action.getValue(), action.getTime());
             }
         }
@@ -227,7 +286,7 @@ public class StatManager {
         if (statsTime == null)
             statsTime = Instant.now();
         for (Badge<?> badge : playerBadges) {
-            if (validBadgeStats(badge, stats, statsTime)) {
+            if (!badge.isCompleted() && validBadgeStats(badge, stats, statsTime)) {
                 changeBadgeValue(player, badge, stats.getValue(), statsTime);
             }
         }
@@ -241,9 +300,6 @@ public class StatManager {
         if (!badge.getPlayer().equals(action.getPlayer()))
             return false;
 
-        if (!badge.isCompleted())
-            return false;
-
         Instant startTime = badge.getStartTime();
         if (startTime != null && startTime.isAfter(action.getTime()))
             return false;
@@ -251,7 +307,7 @@ public class StatManager {
         if (!(badge.getStats() instanceof PlayerActionStats stats))
             return false;
 
-        if (!stats.getActionType().equals(action.getType()))
+        if (!stats.getSourceActionType().equals(action.getType()))
             return false;
 
         return stats.getKeyCondition1().test(action.getKey1()) && stats.getKeyCondition2().test(action.getKey2()) && stats.getKeyCondition3().test(action.getKey3());
@@ -262,9 +318,6 @@ public class StatManager {
             return false;
 
         if (!badge.getPlayer().equals(stats.getPlayer()))
-            return false;
-
-        if (!badge.isCompleted())
             return false;
 
         Instant startTime = badge.getStartTime();
@@ -285,7 +338,7 @@ public class StatManager {
         plugin.callEvent(new PlayerBadgeCompleteEvent(player, badge));
     }
 
-
+    // utility
 
     public String completeAliasedType(String type) {
         return type.contains(":") ? type : plugin.getPlugin().getName().toLowerCase(Locale.ROOT) + ":" + type;

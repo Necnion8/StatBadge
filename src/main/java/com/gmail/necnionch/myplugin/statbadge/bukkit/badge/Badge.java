@@ -1,5 +1,6 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.badge;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,6 +59,17 @@ public class Badge<S extends PlayerStats> {
         return completeTime != null;  // 未来の値だったら未達成と見なす？
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{id=\"" + id + "\""
+                + ", stats=\"" + stats.getType().toString() + "\""
+                + (stats instanceof PlayerActionStats ? ", action=\"" + ((PlayerActionStats) stats).getSourceActionType() + "\"" : "")
+                + ", value=" + stats.getValue()
+                + ", targetValue=" + actionTargetValue
+                + ", start=" + Optional.ofNullable(startTime).map(Instant::toString).orElse("null")
+                + ", complete=" + Optional.ofNullable(completeTime).map(Instant::toString).orElse("null")
+                + ", player=\"" + player + "\"}";
+    }
 
     public record Partial(UUID player, String id, Optional<Long> startTime, Optional<Long> completeTime) {
     }

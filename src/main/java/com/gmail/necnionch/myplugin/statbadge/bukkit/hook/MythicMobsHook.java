@@ -52,12 +52,15 @@ public class MythicMobsHook extends PluginHook implements Listener {
                 return new PlayerMobActionStats(playerId, ACTION_MM_DEATH, 0, config.getString("mob"));
             }
         });
+
         return true;
     }
 
     @Override
     protected boolean onUnhook() {
-        return false;
+        stats.removePlayerActionStatsProvider(ACTION_MM_KILLED);
+        stats.removePlayerActionStatsProvider(ACTION_MM_DEATH);
+        return true;
     }
 
 

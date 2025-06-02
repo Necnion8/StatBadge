@@ -236,15 +236,15 @@ public class SQLiteDatabase implements StatBadgeDatabase {
     }
 
     @Override
-    public <AS extends PlayerActionStats> void loadActionStatsTo(Badge<AS> badge) throws SQLException {
+    public void loadActionStatsTo(Badge<PlayerActionStats> badge) throws SQLException {
         String sql = "SELECT `player`, `plugin`, `type`, `time`, `key1`, `key2`, `key3`, SUM(`value`) FROM `player_actions`";
         List<String> conditions = new ArrayList<>();
         List<StatementArgumentSetter> conditionArgs = new ArrayList<>();
 
         conditions.add("`player` = ? AND `plugin` = ? AND `type` = ?");
         conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getPlayer().toString()));
-        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getActionType().getNamespace()));
-        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getActionType().getKey()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getSourceActionType().getNamespace()));
+        conditionArgs.add((stmt, idx) -> stmt.setString(idx, badge.getStats().getSourceActionType().getKey()));
 
         Optional.ofNullable(badge.getStartTime()).ifPresent(time -> {
             conditions.add("? <= `time`");
@@ -273,7 +273,6 @@ public class SQLiteDatabase implements StatBadgeDatabase {
             try (ResultSet resultSet = stmt.executeQuery()) {
                 if (resultSet.next()) {
                     long value = resultSet.getLong(8);
-                    System.out.println(value);
                     badge.getStats().setValue(badge.getStats().getValue() + value);
                 }
             }

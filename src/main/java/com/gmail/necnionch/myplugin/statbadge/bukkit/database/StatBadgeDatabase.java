@@ -28,7 +28,7 @@ public interface StatBadgeDatabase {
 
     List<PlayerActionStats> getActionStats(@Nullable PlayerAction.Filter filter) throws SQLException;
 
-    <AS extends PlayerActionStats> void loadActionStatsTo(Badge<AS> badge) throws SQLException;
+    void loadActionStatsTo(Badge<PlayerActionStats> badge) throws SQLException;
 
     Map<String, Badge.Partial> loadPlayerBadges(UUID player, Set<String> ids) throws SQLException;
 

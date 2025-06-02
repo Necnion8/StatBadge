@@ -34,4 +34,8 @@ public class PlayerStats {
         this.value = value;
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{type=\"" + type.toString() + "\", value=" + value + "}";
+    }
 }

@@ -4,3 +4,5 @@ main: com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin
 api-version: '1.13'
 authors: [Necnion8]
 website: https://github.com/Necnion8/StatBadge
+
+softdepend: [MythicMobs, Lands]

@@ -16,15 +16,15 @@ import java.util.function.Predicate;
 public abstract class PlayerActionStats extends PlayerStats {
 
     public static final StatsType STATS_TYPE = new StatsType(JavaPlugin.getProvidingPlugin(StatBadgePlugin.class), "action");
-    private final ActionType actionType;
+    private final ActionType sourceActionType;
 
-    public PlayerActionStats(UUID playerId, ActionType actionType, long value) {
+    public PlayerActionStats(UUID playerId, ActionType sourceActionType, long value) {
         super(playerId, STATS_TYPE, value);
-        this.actionType = actionType;
+        this.sourceActionType = sourceActionType;
     }
 
-    public ActionType getActionType() {
-        return actionType;
+    public ActionType getSourceActionType() {
+        return sourceActionType;
     }
 
     public abstract KeyCondition getKeyCondition1();
@@ -32,6 +32,11 @@ public abstract class PlayerActionStats extends PlayerStats {
     public abstract KeyCondition getKeyCondition2();
 
     public abstract KeyCondition getKeyCondition3();
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{type=\"" + getType().toString() + "\", value=" + getValue() + ", action=\"" + sourceActionType.toString()+ "\"}";
+    }
 
 
     public static final class KeyCondition {

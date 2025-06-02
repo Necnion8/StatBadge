@@ -17,6 +17,13 @@ public abstract class PlayerActionStatsProvider {
         return plugin;
     }
 
-    public abstract PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config);
+    public abstract PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError;
+
+
+    public static class ConfigurationError extends Error {
+        public ConfigurationError(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 
 }

@@ -118,36 +118,46 @@ public class LandsHook extends PluginHook implements Listener {
         } else {
             task.run();
         }
-
     }
 
     @EventHandler
     public void onCreate(LandCreateEvent event) {
         Land land = event.getLand();
         UUID ownerId = land.getOwnerUID();
-        putPlayerStats(ownerId, STATS_LAND_CHUNKS, () -> getOwnLandChunkCount(ownerId));
+        if (event.isAsynchronous()) {
+            PLUGIN.runTask(() -> updatePlayerLandChunks(ownerId));
+        } else {
+            updatePlayerLandChunks(ownerId);
+        }
     }
 
     @EventHandler
     public void onClaim(ChunkPostClaimEvent event) {
         Land land = event.getLand();
         UUID ownerId = land.getOwnerUID();
-        putPlayerStats(ownerId, STATS_LAND_CHUNKS, () -> getOwnLandChunkCount(ownerId));
+        if (event.isAsynchronous()) {
+            PLUGIN.runTask(() -> updatePlayerLandChunks(ownerId));
+        } else {
+            updatePlayerLandChunks(ownerId);
+        }
     }
 
     @EventHandler
     public void onWarEnd(WarEndEvent event) {
-        System.out.println("onWarEnd");  // TODO: test log
+        if (event.isAsynchronous()) {
+            PLUGIN.runTask(() -> processWarEndEvent(event));
+        } else {
+            processWarEndEvent(event);
+        }
+    }
 
+    private void updatePlayerLandChunks(UUID ownerId) {
+        putPlayerStats(ownerId, STATS_LAND_CHUNKS, () -> getOwnLandChunkCount(ownerId));
+    }
+
+    private void processWarEndEvent(WarEndEvent event) {
         MemberHolder winner = event.getWinner();
         MemberHolder loser = event.getLoser();
-
-        Optional.ofNullable(winner).ifPresent(memberHolder -> {
-            System.out.println("winner: " + memberHolder + " / " + memberHolder.getOwnerUID());
-        });
-        Optional.ofNullable(loser).ifPresent(memberHolder -> {
-            System.out.println("loser: " + memberHolder + " / " + memberHolder.getOwnerUID());
-        });
 
         if (winner != null) {
             for (Player player : winner.getOnlinePlayers()) {
@@ -159,7 +169,6 @@ public class LandsHook extends PluginHook implements Listener {
                 addPlayerAction(player, ACTION_LAND_WAR_LOSES);
             }
         }
-
     }
 
 

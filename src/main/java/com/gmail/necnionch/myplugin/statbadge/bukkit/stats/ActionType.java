@@ -30,7 +30,6 @@ public class ActionType {
 
     @Override
     public boolean equals(Object obj) {
-        System.out.println("this: " + this + " vs obj: " + obj);
         return super.equals(obj) || (obj instanceof ActionType && type.equals(((ActionType) obj).type));
     }
 

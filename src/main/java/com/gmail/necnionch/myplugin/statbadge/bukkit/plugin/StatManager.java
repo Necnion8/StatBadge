@@ -4,12 +4,14 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsEntry;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
@@ -344,7 +346,7 @@ public class StatManager {
     }
 
     private void processBadgeValueComplete(Player player, Badge<?> badge, Instant time) {
-        if (badge.isCompleted() || badge.getStats().getValue() < badge.getActionTargetValue())
+        if (badge.isCompleted() || badge.getStats().getValue() < badge.getTargetValue())
             return;
 
         badge.setCompleteTime(time);
@@ -357,4 +359,8 @@ public class StatManager {
         return type.contains(":") ? type : plugin.getPlugin().getName().toLowerCase(Locale.ROOT) + ":" + type;
     }
 
+    public void removeBadge(Player player, @NotNull String arg) {  // TODO: remove test
+        playerBadges.removeIf(b -> b.getId().equals(arg));
+        ((SQLiteDatabase) database).removeBadge(player, arg);
+    }
 }

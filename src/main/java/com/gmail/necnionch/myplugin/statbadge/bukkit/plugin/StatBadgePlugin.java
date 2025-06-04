@@ -8,24 +8,20 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerActionEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeCompleteEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeValueChangeEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerStatsEvent;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.LandsHook;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.MythicMobsHook;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.PluginHook;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStatsProvider;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobEventListener;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerOnlineActionStats;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
+import org.bukkit.event.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.PluginDisableEvent;
@@ -45,7 +41,11 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     private final ActionType actionEntityKilled = new ActionType(this, "entity_killed");
     private final ActionType actionEntityDeath = new ActionType(this, "entity_death");
+    private final ActionType actionOnlineTimeSource = new ActionType(this, "online_time");
+    private final ActionType actionOnlineTime = new ActionType(this, "online_time");
+    private final ActionType actionPlayTime = new ActionType(this, "play_time");
     private final StatBadgeConfig config = new StatBadgeConfig(this);
+    private final PlayerOnlineTimeManager onlineTimeManager = new PlayerOnlineTimeManager(this, actionOnlineTimeSource);
     private @Nullable StatManager statManager;
     private @Nullable StatBadgeDatabase database;
     //
@@ -53,7 +53,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final List<PluginHook> hookedPlugins = new ArrayList<>();
 
     public static StatManager getStatManager() {
-        return Objects.requireNonNull(getPlugin(StatBadgePlugin.class).statManager, "StatManager not initialized");
+        return getPlugin(StatBadgePlugin.class).getStats();
     }
 
     @Override
@@ -74,12 +74,15 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         setupDefaultStats();
         setupHookPlugins();
         hookPlugins();
+        onlineTimeManager.start();
+        onlineTimeManager.loadOnlinePlayers((AFKProvider) hookedPlugins.stream().filter(hook -> hook instanceof AFKProvider).findFirst().orElse(null));
         getServer().getOnlinePlayers().forEach(this::loadPlayer);
     }
 
     @Override
     public void onDisable() {
         unhookPlugins();
+        onlineTimeManager.stopAndCommitAll();
 
         try {  // TODO: fix null
             statManager.commitAndUnloadAll().get();
@@ -88,6 +91,10 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
             e.printStackTrace();
         }
 
+    }
+
+    public StatManager getStats() {
+        return Objects.requireNonNull(statManager, "StatManager not initialized");
     }
 
     private void setupDefaultStats() {
@@ -118,6 +125,18 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                 return new PlayerMobActionStats(playerId, actionEntityDeath, 0, entityType);
             }
         });
+        statManager.addPlayerActionStatsProvider(actionOnlineTime, new PlayerActionStatsProvider(this) {
+            @Override
+            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, false);
+            }
+        });
+        statManager.addPlayerActionStatsProvider(actionPlayTime, new PlayerActionStatsProvider(this) {
+            @Override
+            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, true);
+            }
+        });
         getServer().getPluginManager().registerEvents(new PlayerMobEventListener(statManager, actionEntityKilled, actionEntityDeath), this);
     }
 
@@ -126,6 +145,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         pluginHooks.clear();
         pluginHooks.put("MythicMobs", () -> new MythicMobsHook("MythicMobs", getLogger(), statManager));
         pluginHooks.put("Lands", () -> new LandsHook("Lands", getLogger(), statManager));
+        pluginHooks.put("AFKPlus", () -> new AFKPlusHook(this, "AFKPlus", getLogger(), onlineTimeManager));
     }
 
     private void hookPlugins() {
@@ -183,6 +203,9 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
             Player player = (Player) sender;
             List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
             badges.forEach(b -> player.sendMessage(b.toString()));
+        } else if (2 <= args.length && "remove".equalsIgnoreCase(args[0])) {
+            Player player = (Player) sender;
+            statManager.removeBadge(player, args[1]);
         }
         return true;
     }
@@ -217,12 +240,12 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     // events
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onJoinPlayer(PlayerJoinEvent event) {
         loadPlayer(event.getPlayer());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onQuitPlayer(PlayerQuitEvent event) {
         unloadPlayer(event.getPlayer());
     }

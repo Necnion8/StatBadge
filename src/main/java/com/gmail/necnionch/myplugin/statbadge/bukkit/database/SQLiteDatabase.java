@@ -5,6 +5,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerAction;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -304,6 +305,19 @@ public class SQLiteDatabase implements StatBadgeDatabase {
                 }
                 return badges;
             }
+        }
+    }
+
+
+    public void removeBadge(Player player, String badgeId) {  // TODO: remove test
+        try (Connection conn = getConnectionTry();
+            PreparedStatement stmt = conn.prepareStatement("DELETE FROM `player_badges` WHERE `player` = ? AND `id` = ?")) {
+            stmt.setString(1, player.getUniqueId().toString());
+            stmt.setString(2, badgeId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

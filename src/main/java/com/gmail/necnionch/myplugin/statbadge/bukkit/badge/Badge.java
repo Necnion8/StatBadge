@@ -13,7 +13,7 @@ public class Badge<S extends PlayerStats> {
     private final String id;
     private final UUID player;
     private final S stats;
-    private final @Nullable Instant startTime;
+    private @Nullable Instant startTime;
     private @Nullable Instant completeTime;
     private final long targetValue;
 
@@ -40,6 +40,10 @@ public class Badge<S extends PlayerStats> {
 
     public @Nullable Instant getStartTime() {
         return startTime;
+    }
+
+    public void setStartTime(@Nullable Instant startTime) {
+        this.startTime = startTime;
     }
 
     public @Nullable Instant getCompleteTime() {

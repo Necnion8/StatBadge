@@ -33,6 +33,7 @@ dependencies {
     compileOnly "org.jetbrains:annotations:24.0.0"
     compileOnly "org.spigotmc:spigot-api:1.13.2-R0.1-SNAPSHOT"
     implementation "com.zaxxer:HikariCP:4.0.3" exclude group: "org.slf4j"
+    compileOnly "net.kyori:adventure-api:4.21.0"
 
     compileOnly "com.github.angeschossen:LandsAPI:7.10.13"
     compileOnly 'io.lumine:Mythic-Dist:5.6.1'

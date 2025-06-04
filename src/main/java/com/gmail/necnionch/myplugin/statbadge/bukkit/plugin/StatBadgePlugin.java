@@ -1,6 +1,8 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BukkitCommand;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.command.StatBadgeCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
@@ -16,8 +18,6 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobActionS
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobEventListener;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerOnlineActionStats;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 
 public final class StatBadgePlugin extends JavaPlugin implements StatBadgePluginInterface, Listener {
 
+    private final BukkitCommand.Compat commands = BukkitCommand.compat(this);
     private final ActionType actionEntityKilled = new ActionType(this, "entity_killed");
     private final ActionType actionEntityDeath = new ActionType(this, "entity_death");
     private final ActionType actionOnlineTimeSource = new ActionType(this, "online_time");
@@ -77,6 +78,9 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         onlineTimeManager.start();
         onlineTimeManager.loadOnlinePlayers((AFKProvider) hookedPlugins.stream().filter(hook -> hook instanceof AFKProvider).findFirst().orElse(null));
         getServer().getOnlinePlayers().forEach(this::loadPlayer);
+
+        commands.init();
+        commands.register(new StatBadgeCommand(statManager));  // TODO: load check
     }
 
     @Override
@@ -91,6 +95,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
             e.printStackTrace();
         }
 
+        commands.close();
     }
 
     public StatManager getStats() {
@@ -194,20 +199,6 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     private void unloadPlayer(Player player) {
         getStatManager().unloadPlayer(player);
-    }
-
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        StatManager statManager = getStatManager();
-        if (1 <= args.length && "list".equalsIgnoreCase(args[0])) {
-            Player player = (Player) sender;
-            List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
-            badges.forEach(b -> player.sendMessage(b.toString()));
-        } else if (2 <= args.length && "remove".equalsIgnoreCase(args[0])) {
-            Player player = (Player) sender;
-            statManager.removeBadge(player, args[1]);
-        }
-        return true;
     }
 
     // interface

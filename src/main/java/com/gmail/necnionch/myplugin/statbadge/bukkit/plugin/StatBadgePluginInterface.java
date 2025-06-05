@@ -1,5 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsConfig;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.plugin.Plugin;
@@ -30,6 +32,10 @@ public interface StatBadgePluginInterface {
     StatManager getStats();
 
     PlayerOnlineTimeManager getPlayerOnlineTimeManager();
+
+    StatsConfig getStatsConfig();
+
+    BadgesConfig getBadgesConfig();
 
 
     void logDebug(Supplier<String> message);

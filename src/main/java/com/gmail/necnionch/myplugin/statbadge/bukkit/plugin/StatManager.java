@@ -2,7 +2,6 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
@@ -27,7 +26,6 @@ public class StatManager {
     private final Unsafe unsafe = new Unsafe();
     private final Object lock = new Object();
     private final StatBadgePluginInterface plugin;
-    private final StatBadgeConfig config;
     private final StatBadgeDatabase database;
     private @Nullable BukkitTask commitTimerTask;
     private final List<PlayerAction> actionCached = new ArrayList<>();
@@ -37,9 +35,8 @@ public class StatManager {
     private final Map<String, PlayerActionStatsProvider> playerActionStatsProviders = new HashMap<>();
 
 
-    public StatManager(StatBadgePluginInterface plugin, StatBadgeConfig config, StatBadgeDatabase database) {
+    public StatManager(StatBadgePluginInterface plugin, StatBadgeDatabase database) {
         this.plugin = plugin;
-        this.config = config;
         this.database = database;
     }
 
@@ -214,12 +211,13 @@ public class StatManager {
     }
 
     private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
-        if (config.badges().isEmpty()) {
+        Map<String, BadgeEntry> configBadges = new HashMap<>(plugin.getBadgesConfig().badges());
+        Map<String, StatsEntry> configStats = plugin.getStatsConfig().stats();
+
+        if (configBadges.isEmpty()) {
             playerBadges.clear();
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
-
-        Map<String, BadgeEntry> configBadges = new HashMap<>(config.badges());
 
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -233,7 +231,7 @@ public class StatManager {
             List<Badge<?>> badges = new ArrayList<>();
 
             configBadges.forEach((id, badgeEntry) -> {
-                StatsEntry statsEntry = config.stats().get(badgeEntry.statsType());
+                StatsEntry statsEntry = configStats.get(badgeEntry.statsType());
                 if (statsEntry == null) {
                     getLogger().warning("Unable to init badge: " + badgeEntry.id() + ": Unknown stats: " + badgeEntry.statsType());
                     return;

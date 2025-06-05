@@ -1,0 +1,7 @@
+mythicmobs_killed_skeleton_king:  # stats id
+  type: action  # stats type
+  # type: guildsystem:member_count
+  action: mythicmobs_killed  # action type
+  # action: guildsystem:quest_complete
+  mob: "SkeletonKing"
+  # DB key1, key2, key3 を 変換する

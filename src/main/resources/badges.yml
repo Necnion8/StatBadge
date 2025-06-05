@@ -1,0 +1,6 @@
+mythic_skeleton_kill:  # badge id
+  name: "&6Skeleton Kills"  # GUI等での表示名
+  description: "Kill skeleton"  # GUI等での説明文
+  title: ""  # ネームタグやサイドボードでの表示
+  stats: mythicmobs_killed_skeleton_king  # stats id
+  stats-value: 10

@@ -3,6 +3,7 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.command;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
@@ -98,6 +99,14 @@ public class StatBadgeCommand extends Command {
         }
     }
 
+    @Override
+    protected ComponentLike getInvalidArgumentErrorMessage(Context context, InvalidArgumentError error) {
+        if (error.getCause() instanceof PlayerNotFound) {
+            return Component.text("指定されたプレイヤーが見つかりません", NamedTextColor.RED);
+        }
+        return super.getInvalidArgumentErrorMessage(context, error);
+    }
+
     private static Optional<Player> getPlayerSender(Context context) {
         if (context.getSenderObject() instanceof Player player)
             return Optional.of(player);
@@ -111,7 +120,7 @@ public class StatBadgeCommand extends Command {
             return Bukkit.getOnlinePlayers().stream()
                     .filter(p -> p.getName().equalsIgnoreCase(input))
                     .findFirst()
-                    .orElse(null);
+                    .orElseThrow(PlayerNotFound::new);
         }
 
         @Override
@@ -119,6 +128,10 @@ public class StatBadgeCommand extends Command {
             return Bukkit.getOnlinePlayers().stream().map(HumanEntity::getName);
         }
     };
+
+
+    public static class PlayerNotFound extends InvalidArgumentError.InExecuting {
+    }
 
     private class BadgeArgument extends Argument<Badge<?>> {
 

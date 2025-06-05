@@ -1,7 +1,7 @@
  package com.gmail.necnionch.myplugin.statbadge.bukkit.hook;
 
  import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.PlayerOnlineTimeManager;
- import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
+ import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
  import net.lapismc.afkplus.AFKPlus;
  import net.lapismc.afkplus.api.AFKStartEvent;
  import net.lapismc.afkplus.api.AFKStopEvent;
@@ -17,14 +17,14 @@
 
 public class AFKPlusHook extends PluginHook implements Listener, AFKProvider {
 
-    private final StatBadgePlugin owner;
+    private final StatBadgePluginInterface plugin;
     private final PlayerOnlineTimeManager onlineTimeManager;
     private AFKPlus afkPlus;
 
-    public AFKPlusHook(StatBadgePlugin owner, String pluginName, Logger logger, PlayerOnlineTimeManager onlineTimeManager) {
+    public AFKPlusHook(StatBadgePluginInterface plugin, String pluginName, Logger logger) {
         super(pluginName, logger);
-        this.owner = owner;
-        this.onlineTimeManager = onlineTimeManager;
+        this.plugin = plugin;
+        this.onlineTimeManager = this.plugin.getPlayerOnlineTimeManager();
     }
 
     @Override
@@ -40,7 +40,7 @@ public class AFKPlusHook extends PluginHook implements Listener, AFKProvider {
     @Override
     protected boolean onUnhook() {
         if (afkPlus != null) {
-            owner.getServer().getOnlinePlayers().forEach(onlineTimeManager::unsetAFK);
+            plugin.getOnlinePlayers().forEach(onlineTimeManager::unsetAFK);
         }
         afkPlus = null;
         return true;

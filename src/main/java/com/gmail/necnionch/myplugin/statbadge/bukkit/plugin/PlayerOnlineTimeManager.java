@@ -35,13 +35,24 @@ public class PlayerOnlineTimeManager implements Listener {
         plugin.getPlugin().getServer().getPluginManager().registerEvents(this, plugin.getPlugin());
     }
 
+    /**
+     * 管理している処理を停止させて、保持するデータをコミットして解放します。<br>
+     * イベントを処理するために、プラグインが有効である必要があります。
+     * @see PlayerOnlineTimeManager#shutdown()
+     */
     public void stop() {
         HandlerList.unregisterAll(this);
+        new ArrayList<>(players.keySet()).forEach(this::putPlayerTimerAction);
+        players.clear();
     }
 
-    public void stopAndCommitAll() {
-        stop();
-        new ArrayList<>(players.keySet()).forEach(this::commitPlayerTimer);
+    /**
+     * 管理している処理を停止させて、保持するデータをコミットして解放します。
+     * @see PlayerOnlineTimeManager#stop()
+     */
+    public void shutdown() {
+        HandlerList.unregisterAll(this);
+        commitPlayerTimerAll();
         players.clear();
     }
 
@@ -52,11 +63,11 @@ public class PlayerOnlineTimeManager implements Listener {
     }
 
     private StatManager getStats() {
-        return ((StatBadgePlugin) plugin.getPlugin()).getStats();
+        return plugin.getStats();
     }
 
     private void startPlayerTimer(Player player, boolean isAFK) {
-        commitPlayerTimer(player);
+        putPlayerTimerAction(player);
         if (players.containsKey(player)) {
             players.get(player).afk = isAFK;
             players.get(player).startTime = Instant.now();
@@ -65,7 +76,7 @@ public class PlayerOnlineTimeManager implements Listener {
         }
     }
 
-    private void commitPlayerTimer(Player player) {
+    private void putPlayerTimerAction(Player player) {
         PlayerTimer timer;
         if ((timer = players.remove(player)) == null)
             return;
@@ -74,6 +85,18 @@ public class PlayerOnlineTimeManager implements Listener {
         long duration = now.toEpochMilli() - timer.startTime.toEpochMilli();
         String afk = timer.afk ? PlayerOnlineActionStats.KEY_AFK_ON : PlayerOnlineActionStats.KEY_AFK_OFF;
         getStats().addAction(player, new PlayerAction(player.getUniqueId(), actionType, now, afk, null, null, duration));
+    }
+
+    private void commitPlayerTimerAll() {
+        Instant now = Instant.now();
+        getStats().unsafe().addActionsToDatabase(players.entrySet().stream()
+                .map(e -> {
+                    PlayerTimer timer = e.getValue();
+                    long duration = now.toEpochMilli() - timer.startTime.toEpochMilli();
+                    String afk = timer.afk ? PlayerOnlineActionStats.KEY_AFK_ON : PlayerOnlineActionStats.KEY_AFK_OFF;
+                    return new PlayerAction(e.getKey().getUniqueId(), actionType, now, afk, null, null, duration);
+                })
+                .toList());
     }
 
     private void clearPlayerTimer(Player player) {
@@ -105,7 +128,7 @@ public class PlayerOnlineTimeManager implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        commitPlayerTimer(event.getPlayer());
+        putPlayerTimerAction(event.getPlayer());
         clearPlayerTimer(event.getPlayer());
     }
 

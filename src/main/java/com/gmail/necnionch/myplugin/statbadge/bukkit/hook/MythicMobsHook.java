@@ -1,6 +1,6 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.hook;
 
-import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerAction;
@@ -19,7 +19,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,29 +26,31 @@ import java.util.logging.Logger;
 
 public class MythicMobsHook extends PluginHook implements Listener {
 
-    private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(StatBadgePlugin.class);
-    public static final ActionType ACTION_MM_KILLED = new ActionType(PLUGIN, "mythicmobs_killed");
-    public static final ActionType ACTION_MM_DEATH = new ActionType(PLUGIN, "mythicmobs_death");
-    private final StatManager stats;
+    private final StatBadgePluginInterface plugin;
+    private final ActionType actionKilled;
+    private final ActionType actionDeath;
 
-    public MythicMobsHook(String pluginName, Logger logger, StatManager stats) {
+    public MythicMobsHook(StatBadgePluginInterface plugin, String pluginName, Logger logger) {
         super(pluginName, logger);
-        this.stats = stats;
+        this.plugin = plugin;
+        this.actionKilled = new ActionType(plugin.getPlugin(), "mythicmobs_killed");
+        this.actionDeath = new ActionType(plugin.getPlugin(), "mythicmobs_death");
     }
 
     @Override
     protected boolean onHook(Plugin plugin) {
-        stats.addPlayerActionStatsProvider(ACTION_MM_KILLED, new PlayerActionStatsProvider(PLUGIN) {
+        StatManager stats = this.plugin.getStats();
+        stats.addPlayerActionStatsProvider(actionKilled, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) {
-                return new PlayerMobActionStats(playerId, ACTION_MM_KILLED, 0, config.getString("mob"));
+                return new PlayerMobActionStats(playerId, actionKilled, 0, config.getString("mob"));
             }
         });
 
-        stats.addPlayerActionStatsProvider(ACTION_MM_DEATH, new PlayerActionStatsProvider(PLUGIN) {
+        stats.addPlayerActionStatsProvider(actionDeath, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) {
-                return new PlayerMobActionStats(playerId, ACTION_MM_DEATH, 0, config.getString("mob"));
+                return new PlayerMobActionStats(playerId, actionDeath, 0, config.getString("mob"));
             }
         });
 
@@ -58,8 +59,9 @@ public class MythicMobsHook extends PluginHook implements Listener {
 
     @Override
     protected boolean onUnhook() {
-        stats.removePlayerActionStatsProvider(ACTION_MM_KILLED);
-        stats.removePlayerActionStatsProvider(ACTION_MM_DEATH);
+        StatManager stats = plugin.getStats();
+        stats.removePlayerActionStatsProvider(actionKilled);
+        stats.removePlayerActionStatsProvider(actionDeath);
         return true;
     }
 
@@ -82,7 +84,7 @@ public class MythicMobsHook extends PluginHook implements Listener {
         try (MythicBukkit api = MythicBukkit.inst()) {
             ActiveMob mob = api.getMobManager().getMythicMobInstance(deathEntity);
             if (mob != null)
-                addAction(damagerPlayer, mob, ACTION_MM_KILLED);
+                addAction(damagerPlayer, mob, actionKilled);
         }
     }
 
@@ -104,12 +106,12 @@ public class MythicMobsHook extends PluginHook implements Listener {
         try (MythicBukkit api = MythicBukkit.inst()) {
             ActiveMob mob = api.getMobManager().getMythicMobInstance(damager);
             if (mob != null)
-                addAction(deathPlayer, mob, ACTION_MM_DEATH);
+                addAction(deathPlayer, mob, actionDeath);
         }
     }
 
     private void addAction(Player player, ActiveMob mob, ActionType actionType) {
-        stats.addAction(player, new PlayerAction(
+        plugin.getStats().addAction(player, new PlayerAction(
                 player.getUniqueId(), actionType, Instant.now(), mob.getMobType(), null, null, 1
         ));
     }

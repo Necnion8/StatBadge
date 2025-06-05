@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class StatManager {
 
+    private final Unsafe unsafe = new Unsafe();
     private final Object lock = new Object();
     private final StatBadgePluginInterface plugin;
     private final StatBadgeConfig config;
@@ -147,6 +148,10 @@ public class StatManager {
             }
             return true;
         });
+    }
+
+    public Unsafe unsafe() {
+        return unsafe;
     }
 
     // providers
@@ -363,4 +368,25 @@ public class StatManager {
         playerBadges.removeIf(b -> b.getId().equals(arg));
         ((SQLiteDatabase) database).removeBadge(player, arg);
     }
+
+
+    public class Unsafe {
+        private Unsafe() {}
+
+        /**
+         * アクションをデータベースにコミットします<br>
+         * イベントや値を処理せず、同期的にデータベースへコミットします。
+         */
+        public void addActionsToDatabase(Collection<PlayerAction> actions) {
+            synchronized (lock) {
+                if (commitTimerTask != null) {
+                    commitTimerTask.cancel();
+                    commitTimerTask = null;
+                }
+            }
+            actionCached.addAll(actions);
+            commitCachedActions();
+        }
+    }
+
 }

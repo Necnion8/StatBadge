@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class StatBadgePlugin extends JavaPlugin implements StatBadgePluginInterface, Listener {
@@ -53,6 +54,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final Map<String, Supplier<PluginHook>> pluginHooks = new HashMap<>();
     private final List<PluginHook> hookedPlugins = new ArrayList<>();
 
+    @SuppressWarnings("unused")
     public static StatManager getStatManager() {
         return getPlugin(StatBadgePlugin.class).getStats();
     }
@@ -86,7 +88,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public void onDisable() {
         unhookPlugins();
-        onlineTimeManager.stopAndCommitAll();
+        onlineTimeManager.shutdown();
 
         try {  // TODO: fix null
             statManager.commitAndUnloadAll().get();
@@ -98,12 +100,8 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         commands.close();
     }
 
-    public StatManager getStats() {
-        return Objects.requireNonNull(statManager, "StatManager not initialized");
-    }
-
     private void setupDefaultStats() {
-        StatManager statManager = getStatManager();
+        StatManager statManager = getStats();
         statManager.addPlayerActionStatsProvider(actionEntityKilled, new PlayerActionStatsProvider(this) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
@@ -146,11 +144,10 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void setupHookPlugins() {
-        StatManager statManager = getStatManager();
         pluginHooks.clear();
-        pluginHooks.put("MythicMobs", () -> new MythicMobsHook("MythicMobs", getLogger(), statManager));
-        pluginHooks.put("Lands", () -> new LandsHook("Lands", getLogger(), statManager));
-        pluginHooks.put("AFKPlus", () -> new AFKPlusHook(this, "AFKPlus", getLogger(), onlineTimeManager));
+        pluginHooks.put("MythicMobs", () -> new MythicMobsHook(this, "MythicMobs", getLogger()));
+        pluginHooks.put("Lands", () -> new LandsHook(this, "Lands", getLogger()));
+        pluginHooks.put("AFKPlus", () -> new AFKPlusHook(this, "AFKPlus", getLogger()));
     }
 
     private void hookPlugins() {
@@ -182,23 +179,20 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void loadPlayer(Player player) {
-        StatManager statManager = getStatManager();
+        StatManager statManager = getStats();
         statManager.loadPlayer(player).thenAccept(result -> {
             if (result) {
                 List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
-                getLogger().warning("Loaded " + badges.size() + " player badges: " + player.getName());
-                for (Badge<?> badge : badges) {
-                    System.out.println("- " + badge);
-                }
+                logDebug(() -> "Loaded " + badges.size() + " badges: " + player.getName());
             }
         }).exceptionally(ex -> {
-            ex.printStackTrace();
+            getLogger().log(Level.SEVERE, "Exception in load player", ex);
             return null;
         });
     }
 
     private void unloadPlayer(Player player) {
-        getStatManager().unloadPlayer(player);
+        getStats().unloadPlayer(player);
     }
 
     // interface
@@ -214,6 +208,26 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     @Override
+    public @Nullable Player getPlayer(UUID playerId) {
+        return getServer().getPlayer(playerId);
+    }
+
+    @Override
+    public Collection<? extends Player> getOnlinePlayers() {
+        return getServer().getOnlinePlayers();
+    }
+
+    @Override
+    public StatManager getStats() {
+        return Objects.requireNonNull(statManager, "StatManager not initialized");
+    }
+
+    @Override
+    public PlayerOnlineTimeManager getPlayerOnlineTimeManager() {
+        return onlineTimeManager;
+    }
+
+    @Override
     public BukkitTask runTaskLaterAsynchronously(Runnable task, long delay) {
         return getServer().getScheduler().runTaskLaterAsynchronously(this, task, delay);
     }
@@ -225,8 +239,25 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     @Override
     public <E extends Event> E callEvent(E event) {
+        if (!isEnabled()) {
+            return null;
+        }
         getServer().getPluginManager().callEvent(event);
         return event;
+    }
+
+    @Override
+    public void logDebug(String message) {
+        if (config.isDebugEnable()) {
+            getLogger().warning("[DEBUG]: " + message);
+        }
+    }
+
+    @Override
+    public void logDebug(Supplier<String> message) {
+        if (config.isDebugEnable()) {
+            getLogger().warning(() -> "[DEBUG]: " + message.get());
+        }
     }
 
     // events

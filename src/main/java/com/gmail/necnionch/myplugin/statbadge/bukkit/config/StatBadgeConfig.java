@@ -43,4 +43,8 @@ public class StatBadgeConfig extends BukkitConfiguration {
         return badges;
     }
 
+    public boolean isDebugEnable() {
+        return true;  // TODO:
+    }
+
 }

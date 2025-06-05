@@ -1,8 +1,10 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 
+import java.time.Duration;
 import java.util.UUID;
 
 public class PlayerOnlineActionStats extends PlayerActionStats {
@@ -14,6 +16,11 @@ public class PlayerOnlineActionStats extends PlayerActionStats {
     public PlayerOnlineActionStats(UUID playerId, ActionType actionType, long value, boolean onlyPlayTime) {
         super(playerId, actionType, value);
         this.onlyPlayTime = onlyPlayTime;
+    }
+
+    @Override
+    public String formatValue(StatBadgeLang lang, long value) {
+        return lang.formatDuration(Duration.ofMillis(value));
     }
 
     public boolean isOnlyPlayTime() {

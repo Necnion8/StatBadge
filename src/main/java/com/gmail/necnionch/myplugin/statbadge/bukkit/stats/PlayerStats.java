@@ -1,5 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
+
 import java.util.UUID;
 
 /**
@@ -32,6 +34,10 @@ public class PlayerStats {
 
     public void setValue(long value) {
         this.value = value;
+    }
+
+    public String formatValue(StatBadgeLang lang, long value) {
+        return String.format("%,d", value);
     }
 
     @Override

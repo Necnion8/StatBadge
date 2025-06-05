@@ -361,6 +361,7 @@ public class Command {
             if (args.isEmpty())
                 return childrenCommands
                         .stream()
+                        .filter(context::testPermissionWith)
                         .filter(c -> !c.isPlayerOnly() || context.getSender() instanceof PlayerSender)
                         .map(Command::getName)
                         .filter(startsLowerWith(input))
@@ -642,11 +643,11 @@ public class Command {
 
         public Optional<String> getCurrentPermission() {
             return Optional.ofNullable(commands.get(0).getPermissionBaseName())
-                    .map(p -> "." + commands.stream().map(Command::getName).collect(Collectors.joining(".")));
+                    .map(p -> p + "." + commands.stream().map(Command::getName).collect(Collectors.joining(".")));
         }
 
         public Optional<String> getCurrentPermissionWith(Command command) {
-            return getCurrentPermission().map(p -> "." + command.getName());
+            return getCurrentPermission().map(p -> p + "." + command.getName());
         }
 
         @SuppressWarnings("BooleanMethodIsAlwaysInverted")

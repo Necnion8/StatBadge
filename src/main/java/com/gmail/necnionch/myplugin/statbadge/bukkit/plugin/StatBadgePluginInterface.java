@@ -1,6 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsConfig;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -36,6 +37,8 @@ public interface StatBadgePluginInterface {
     StatsConfig getStatsConfig();
 
     BadgesConfig getBadgesConfig();
+
+    StatBadgeLang getLangConfig();
 
 
     void logDebug(Supplier<String> message);

@@ -12,9 +12,13 @@ softdepend:
   - KyoriAdventureLib
 
 commands:
+  badges:
+    permission: statbadge.command.badges
   statbadge:
     permission: statbadge.command.statbadge
 
 permissions:
+  statbadge.command.badges:
+    default: true
   statbadge.command.statbadge:
     default: op

@@ -1,5 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.hook;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
@@ -128,6 +130,11 @@ public class MythicMobsHook extends PluginHook implements Listener {
 
         public String getMobType() {
             return mobType;
+        }
+
+        @Override
+        public String formatValue(StatBadgeLang lang, long value) {
+            return lang.format(Lang.UI_UNIT_COUNT, value).content();
         }
 
         @Override

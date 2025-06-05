@@ -1,5 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import org.bukkit.entity.EntityType;
@@ -16,6 +18,11 @@ public class PlayerMobActionStats extends PlayerActionStats {
 
     public EntityType getEntityType() {
         return entityType;
+    }
+
+    @Override
+    public String formatValue(StatBadgeLang lang, long value) {
+        return lang.format(Lang.UI_UNIT_COUNT, value).content();
     }
 
     @Override

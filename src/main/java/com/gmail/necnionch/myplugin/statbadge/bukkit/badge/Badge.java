@@ -1,5 +1,6 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.badge;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import org.jetbrains.annotations.Nullable;
@@ -11,14 +12,16 @@ import java.util.UUID;
 public class Badge<S extends PlayerStats> {
 
     private final String id;
+    private final BadgeEntry config;
     private final UUID player;
     private final S stats;
     private @Nullable Instant startTime;
     private @Nullable Instant completeTime;
     private final long targetValue;
 
-    public Badge(String id, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, long targetValue) {
+    public Badge(String id, BadgeEntry config, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, long targetValue) {
         this.id = id;
+        this.config = config;
         this.player = player;
         this.stats = stats;
         this.startTime = startTime;
@@ -58,10 +61,23 @@ public class Badge<S extends PlayerStats> {
         return targetValue;
     }
 
-
     public boolean isCompleted() {
         return completeTime != null;  // 未来の値だったら未達成と見なす？
     }
+
+
+    public String getName() {
+        return config.name();
+    }
+
+    public String getDescription() {
+        return config.description();
+    }
+
+    public String getTitle() {
+        return config.title();
+    }
+
 
     @Override
     public String toString() {

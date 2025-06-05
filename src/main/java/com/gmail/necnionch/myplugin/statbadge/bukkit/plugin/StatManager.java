@@ -17,9 +17,11 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class StatManager {
 
@@ -94,10 +96,16 @@ public class StatManager {
         return playerBadges.stream().map(Badge::getPlayer).collect(Collectors.toUnmodifiableSet());
     }
 
+    public Stream<Badge<?>> streamPlayerBadges(UUID player) {
+        return playerBadges.stream().filter(b -> b.getPlayer().equals(player));
+    }
+
+    public Stream<Badge<?>> streamCompletedPlayerBadges(UUID player) {
+        return streamPlayerBadges(player).filter(Badge::isCompleted);
+    }
+
     public List<Badge<?>> getPlayerBadges(UUID player) {
-        return playerBadges.stream()
-                .filter(b -> b.getPlayer().equals(player))
-                .toList();
+        return streamPlayerBadges(player).toList();
     }
 
     /**
@@ -110,10 +118,9 @@ public class StatManager {
                 getLogger().log(Level.SEVERE, "Exception in load player: " + player.getUniqueId(), throwable);
                 return false;
             } else {
-                getLogger().info("Loaded " + player.getUniqueId() + "'s badge " + badges.size());
+                plugin.logDebug(() -> "Loaded " + badges.size() + " badges: " + player.getName());
 
                 plugin.callEvent(new PlayerBadgeLoadEvent(player, badges));
-
                 Instant now = Instant.now();
                 badges.forEach(b -> processBadgeValueComplete(player, b, now));
                 return true;
@@ -212,7 +219,7 @@ public class StatManager {
 
     private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
         Map<String, BadgeEntry> configBadges = new HashMap<>(plugin.getBadgesConfig().badges());
-        Map<String, StatsEntry> configStats = plugin.getStatsConfig().stats();
+        Map<String, StatsEntry> configStats = new HashMap<>(plugin.getStatsConfig().stats());
 
         if (configBadges.isEmpty()) {
             playerBadges.clear();
@@ -259,7 +266,7 @@ public class StatManager {
                 if (partial != null) {
                     Instant startTime = partial.startTime().map(Instant::ofEpochMilli).orElse(null);
                     Instant completeTime = partial.completeTime().map(Instant::ofEpochMilli).orElse(null);
-                    badge = new Badge<>(badgeEntry.id(), player, playerStats, startTime, completeTime, badgeEntry.statsValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime, badgeEntry.statsValue());
 
                     if (playerStats instanceof PlayerActionStats) {
                         try {
@@ -272,7 +279,7 @@ public class StatManager {
                     }
 
                 } else {
-                    badge = new Badge<>(badgeEntry.id(), player, playerStats, Instant.now(), null, badgeEntry.statsValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, badgeEntry.statsValue());
                 }
 
                 badges.add(badge);
@@ -354,6 +361,55 @@ public class StatManager {
 
         badge.setCompleteTime(time);
         plugin.callEvent(new PlayerBadgeCompleteEvent(player, badge));
+    }
+
+    public Collection<BadgeEntry> getBadges() {
+        return Collections.unmodifiableCollection(plugin.getBadgesConfig().badges().values());
+    }
+
+    public Collection<StatsEntry> getStats() {
+        return Collections.unmodifiableCollection(plugin.getStatsConfig().stats().values());
+    }
+
+    public Optional<Badge<?>> getPlayerBadge(UUID player, String badgeId) {
+        return streamPlayerBadges(player)
+                .filter(b -> b.getId().equals(badgeId))
+                .findFirst();
+    }
+
+    public @Nullable Badge<?> applyPlayerBadge(UUID player, String badgeId, Consumer<Badge<?>> action) {
+        Badge<?> badge = getPlayerBadge(player, badgeId).orElse(null);
+        if (badge != null) {
+            action.accept(badge);
+        }
+        return badge;
+    }
+
+    public @Nullable Badge<?> grantBadge(Player player, String badgeId, @Nullable Instant completeTime) {
+        return applyPlayerBadge(player.getUniqueId(), badgeId, badge -> {
+            if (!badge.isCompleted()) {
+                badge.setCompleteTime(completeTime);
+                plugin.callEvent(new PlayerBadgeCompleteEvent(player, badge));
+            }
+        });
+    }
+
+    public @Nullable Badge<?> grantBadge(Player player, String badgeId) {
+        return grantBadge(player, badgeId, Instant.now());
+    }
+
+    public @Nullable Badge<?> revokeBadge(Player player, String badgeId, @Nullable Instant startTime) {
+        return applyPlayerBadge(player.getUniqueId(), badgeId,badge -> {
+            if (badge.isCompleted()) {
+                badge.setStartTime(startTime);
+                badge.setCompleteTime(null);
+                plugin.callEvent(new PlayerBadgeRemoveEvent(player, badge));
+            }
+        });
+    }
+
+    public @Nullable Badge<?> revokeBadge(Player player, String badgeId) {
+        return revokeBadge(player, badgeId, Instant.now());
     }
 
     // utility

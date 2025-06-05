@@ -1,10 +1,11 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
-import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BadgesCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BukkitCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.StatBadgeCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
@@ -37,7 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class StatBadgePlugin extends JavaPlugin implements StatBadgePluginInterface, Listener {
@@ -51,6 +51,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final StatBadgeConfig config = new StatBadgeConfig(this);
     private final StatsConfig statsConfig = new StatsConfig(this);
     private final BadgesConfig badgesConfig = new BadgesConfig(this);
+    private final StatBadgeLang langConfig = new StatBadgeLang(this);
     private final PlayerOnlineTimeManager onlineTimeManager = new PlayerOnlineTimeManager(this, actionOnlineTimeSource);
     private @Nullable StatManager statManager;
     private @Nullable StatBadgeDatabase database;
@@ -64,10 +65,16 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     @Override
+    public void onLoad() {
+        commands.init();
+    }
+
+    @Override
     public void onEnable() {
         config.load();
         statsConfig.load();
         badgesConfig.load();
+        langConfig.load();
         database = new SQLiteDatabase(getDataFolder(), new SQLiteDatabase.Config("test.db", Collections.emptyMap()));
         statManager = new StatManager(this, database);
 
@@ -87,8 +94,8 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         onlineTimeManager.loadOnlinePlayers((AFKProvider) hookedPlugins.stream().filter(hook -> hook instanceof AFKProvider).findFirst().orElse(null));
         getServer().getOnlinePlayers().forEach(this::loadPlayer);
 
-        commands.init();
-        commands.register(new StatBadgeCommand(statManager));  // TODO: load check
+        commands.register(new StatBadgeCommand(this));
+        commands.register(new BadgesCommand(this));
     }
 
     @Override
@@ -185,16 +192,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     private void loadPlayer(Player player) {
-        StatManager statManager = getStats();
-        statManager.loadPlayer(player).thenAccept(result -> {
-            if (result) {
-                List<Badge<?>> badges = statManager.getPlayerBadges(player.getUniqueId());
-                logDebug(() -> "Loaded " + badges.size() + " badges: " + player.getName());
-            }
-        }).exceptionally(ex -> {
-            getLogger().log(Level.SEVERE, "Exception in load player", ex);
-            return null;
-        });
+        getStats().loadPlayer(player);
     }
 
     private void unloadPlayer(Player player) {
@@ -221,6 +219,11 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public BadgesConfig getBadgesConfig() {
         return badgesConfig;
+    }
+
+    @Override
+    public StatBadgeLang getLangConfig() {
+        return langConfig;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.hook;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
@@ -177,6 +179,11 @@ public class LandsHook extends PluginHook implements Listener {
     public static class PlayerLandWarCount extends PlayerActionStats {
         public PlayerLandWarCount(UUID playerId, ActionType sourceActionType, long value) {
             super(playerId, sourceActionType, value);
+        }
+
+        @Override
+        public String formatValue(StatBadgeLang lang, long value) {
+            return lang.format(Lang.UI_UNIT_CHUNKS, value).content();
         }
 
         @Override

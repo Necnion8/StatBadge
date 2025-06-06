@@ -20,6 +20,8 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStatsProv
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobEventListener;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerOnlineActionStats;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.util.ItemCustomModelData;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
@@ -42,6 +44,7 @@ import java.util.logging.Logger;
 
 public final class StatBadgePlugin extends JavaPlugin implements StatBadgePluginInterface, Listener {
 
+    public static final LegacyComponentSerializer LEGACY_COMPONENT_SERIALIZER = LegacyComponentSerializer.legacy('&');
     private final BukkitCommand.Compat commands = BukkitCommand.compat(this);
     private final ActionType actionEntityKilled = new ActionType(this, "entity_killed");
     private final ActionType actionEntityDeath = new ActionType(this, "entity_death");
@@ -66,6 +69,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     @Override
     public void onLoad() {
+        ItemCustomModelData.init();
         commands.init();
     }
 
@@ -111,6 +115,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         }
 
         commands.close();
+        ItemCustomModelData.clear();
     }
 
     private void setupDefaultStats() {

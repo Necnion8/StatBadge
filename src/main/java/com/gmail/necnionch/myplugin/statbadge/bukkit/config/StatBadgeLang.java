@@ -1,6 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.config;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.Command;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.plugin.Plugin;
@@ -18,7 +19,7 @@ import java.util.Set;
 
 public class StatBadgeLang extends BukkitConfiguration {
 
-    private final LegacyComponentSerializer serializer = LegacyComponentSerializer.legacy('&');
+    private final LegacyComponentSerializer serializer = StatBadgePlugin.LEGACY_COMPONENT_SERIALIZER;
 
     public StatBadgeLang(Plugin plugin) {
         super(plugin, "lang.yml", "dummy.yml");

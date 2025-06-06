@@ -3,6 +3,7 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.command;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
 import net.kyori.adventure.text.Component;
@@ -28,7 +29,7 @@ import java.util.stream.Stream;
 public class StatBadgeCommand extends Command {
 
     private final StatBadgePluginInterface plugin;
-    private final LegacyComponentSerializer serializer = LegacyComponentSerializer.legacy('&');
+    private final LegacyComponentSerializer serializer = StatBadgePlugin.LEGACY_COMPONENT_SERIALIZER;
 
     public StatBadgeCommand(StatBadgePluginInterface plugin) {
         super("statbadge", null);
@@ -69,6 +70,11 @@ public class StatBadgeCommand extends Command {
 
         String value = badge.getStats().formatValue(lang, badge.getStats().getValue());
         String targetValue = badge.getStats().formatValue(lang, badge.getTargetValue());
+        double progress = 0;
+        if (badge.getTargetValue() != 0) {
+            progress = (double) badge.getStats().getValue() / badge.getTargetValue() * 100;
+            progress = Math.max(0, progress);
+        }
 
         TextComponent.Builder hoverText = Component.text()
                 .append(lang.format(Lang.COMMAND_BADGE_LIST_ITEM_TITLE))
@@ -82,7 +88,7 @@ public class StatBadgeCommand extends Command {
                 .appendNewline()
                 .append(lang.format(Lang.COMMAND_BADGE_LIST_ITEM_STATS_DATE, startTime, completeTime))
                 .appendNewline()
-                .append(lang.format(badge.isCompleted() ? Lang.COMMAND_BADGE_LIST_ITEM_STATS_VALUE_COMPLETED : Lang.COMMAND_BADGE_LIST_ITEM_STATS_VALUE, value, targetValue))
+                .append(lang.format(badge.isCompleted() ? Lang.COMMAND_BADGE_LIST_ITEM_STATS_VALUE_COMPLETED : Lang.COMMAND_BADGE_LIST_ITEM_STATS_VALUE, value, targetValue, progress))
                 .appendNewline()
                 .appendNewline()
                 .append(lang.format(Lang.COMMAND_BADGE_LIST_ITEM_NAME))
@@ -207,7 +213,7 @@ public class StatBadgeCommand extends Command {
     };
 
 
-    public static class PlayerNotFoundError extends InvalidArgumentError.InExecuting {
+    private static class PlayerNotFoundError extends InvalidArgumentError.InExecuting {
     }
 
     private class BadgeArgument extends Argument<Badge<?>> {
@@ -241,7 +247,7 @@ public class StatBadgeCommand extends Command {
         }
     }
 
-    public static class UnknownBadgeError extends InvalidArgumentError.InExecuting {
+    private static class UnknownBadgeError extends InvalidArgumentError.InExecuting {
 
         private final String input;
 
@@ -257,7 +263,7 @@ public class StatBadgeCommand extends Command {
     private final BadgeArgument grantBadgesArgument = new BadgeArgument(b -> !b.isCompleted());
     private final BadgeArgument revokeBadgesArgument = new BadgeArgument(Badge::isCompleted);
 
-    public static class PluginNoLoadedError extends InvalidArgumentError.InExecuting {
+    private static class PluginNoLoadedError extends InvalidArgumentError.InExecuting {
     }
 
 }

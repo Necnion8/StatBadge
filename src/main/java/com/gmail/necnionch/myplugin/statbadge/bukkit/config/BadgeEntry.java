@@ -1,6 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.config;
 
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.Material;
+import org.jetbrains.annotations.Nullable;
 
 public record BadgeEntry(
         String id,
@@ -8,18 +9,7 @@ public record BadgeEntry(
         long statsValue,
         String name,
         String description,
-        String title
-) {
-
-    public static BadgeEntry parse(String id, ConfigurationSection config) {
-        return new BadgeEntry(
-                id,
-                config.getString("stats"),
-                config.getLong("stats-value"),
-                config.getString("name"),
-                config.getString("description"),
-                config.getString("title")
-        );
-    }
-
-}
+        String title,
+        Material icon,
+        @Nullable Object iconCustomModelData
+) {}

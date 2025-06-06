@@ -3,6 +3,7 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
+import org.bukkit.Material;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -76,6 +77,14 @@ public class Badge<S extends PlayerStats> {
 
     public String getTitle() {
         return config.title();
+    }
+
+    public Material getIcon() {
+        return config.icon();
+    }
+
+    public @Nullable Object getIconCustomModelData() {
+        return config.iconCustomModelData();
     }
 
 

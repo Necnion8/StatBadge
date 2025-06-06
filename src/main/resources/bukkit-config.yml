@@ -1,0 +1,22 @@
+
+# 称号を獲得した時にメッセージを表示する  # TODO:
+show-badge-complete-message: true
+
+# 称号リストの設定
+badges-gui:
+  # 達成した称号アイコンにエンチャント効果を適用します  # TODO:
+  enable-icon-glowing-complete: true
+
+# データベース設定
+database:
+  type: sqlite  # 使用できるデータベースの種類: sqlite, mysql
+  sqlite:
+    filename: ./plugin.db
+    options: {}
+  mysql:
+    username: root
+    password: "password"
+    address: localhost:3306
+    database: "statbadge"
+    options:
+      autoReconnect: true

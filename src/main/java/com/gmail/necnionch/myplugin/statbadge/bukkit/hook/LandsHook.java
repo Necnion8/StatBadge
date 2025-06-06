@@ -43,7 +43,7 @@ public class LandsHook extends PluginHook implements Listener {
 
     @Override
     protected boolean onHook(Plugin plugin) {
-        StatManager stats = this.plugin.getStats();
+        StatManager stats = this.plugin.getStatManager();
         lands = LandsIntegration.of(this.plugin.getPlugin());
         stats.addPlayerStatsProvider(statsLandChunks, new PlayerStatsProvider(this.plugin.getPlugin()) {
             @Override
@@ -68,7 +68,7 @@ public class LandsHook extends PluginHook implements Listener {
 
     @Override
     protected boolean onUnhook() {
-        StatManager stats = this.plugin.getStats();
+        StatManager stats = this.plugin.getStatManager();
         stats.removePlayerStatsProvider(statsLandChunks);
         stats.removePlayerActionStatsProvider(actionWarWins);
         stats.removePlayerActionStatsProvider(actionWarLoses);

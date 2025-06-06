@@ -19,19 +19,20 @@ public class BadgesCommand extends Command {
         this.plugin = plugin;
     }
 
-    private StatManager getStats() {
-        try {
-            return plugin.getStats();
-        } catch (NullPointerException e) {
-            throw new PluginNoLoadedError();
-        }
-    }
 
     @Override
     protected void execute(Context context) {
         Player player = (Player) context.getSenderObject();
 
-        List<Badge<?>> badges = getStats().streamPlayerBadges(player.getUniqueId())
+        StatManager stats;
+        try {
+            stats = plugin.getStats();
+        } catch (RuntimeException e) {
+            plugin.getLangConfig().send(context, Lang.COMMAND_NO_LOADED_DATA);
+            return;
+        }
+
+        List<Badge<?>> badges = stats.streamPlayerBadges(player.getUniqueId())
                 .sorted(BadgeListGUI.DEFAULT_SORT)
                 .toList();
 
@@ -41,21 +42,6 @@ public class BadgesCommand extends Command {
         }
 
         BadgeListGUI.show(plugin, player, badges);
-    }
-
-    @Override
-    protected boolean processError(Context context, Throwable error) {
-        if (error instanceof PluginNoLoadedError || error.getCause() instanceof PluginNoLoadedError) {
-            if (context.isExecuted()) {
-                plugin.getLangConfig().send(context, Lang.COMMAND_NO_LOADED_DATA);
-            }
-            return true;
-        }
-        return super.processError(context, error);
-    }
-
-
-    public static class PluginNoLoadedError extends InvalidArgumentError.InExecuting {
     }
 
 }

@@ -41,7 +41,7 @@ public class MythicMobsHook extends PluginHook implements Listener {
 
     @Override
     protected boolean onHook(Plugin plugin) {
-        StatManager stats = this.plugin.getStats();
+        StatManager stats = this.plugin.getStatManager();
         stats.addPlayerActionStatsProvider(actionKilled, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) {
@@ -61,7 +61,7 @@ public class MythicMobsHook extends PluginHook implements Listener {
 
     @Override
     protected boolean onUnhook() {
-        StatManager stats = plugin.getStats();
+        StatManager stats = plugin.getStatManager();
         stats.removePlayerActionStatsProvider(actionKilled);
         stats.removePlayerActionStatsProvider(actionDeath);
         return true;

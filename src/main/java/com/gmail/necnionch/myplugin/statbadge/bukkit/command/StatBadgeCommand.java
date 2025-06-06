@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,7 +50,7 @@ public class StatBadgeCommand extends Command {
     private StatManager getStats() {
         try {
             return plugin.getStats();
-        } catch (NullPointerException e) {
+        } catch (RuntimeException e) {
             throw new PluginNoLoadedError();
         }
     }
@@ -110,7 +111,14 @@ public class StatBadgeCommand extends Command {
 
 
     private void reload(Context context) {
-        context.send(Component.text("reload command!"));
+        boolean result = false;
+        try {
+            result = plugin.reloadStatBadge();
+        } catch (Throwable e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to reload command", e);
+        }
+
+        sendLang(context, result ? Lang.COMMAND_RELOAD : Lang.COMMAND_RELOAD_ERROR);
     }
 
     private void grantBadge(Context context) {

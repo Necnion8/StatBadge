@@ -7,6 +7,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.database.MySQLDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerActionEvent;
@@ -37,15 +38,16 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class StatBadgePlugin extends JavaPlugin implements StatBadgePluginInterface, Listener {
 
     public static final LegacyComponentSerializer LEGACY_COMPONENT_SERIALIZER = LegacyComponentSerializer.legacy('&');
     private final BukkitCommand.Compat commands = BukkitCommand.compat(this);
+    private final StatManager statManager = new StatManager(this, null);
     private final ActionType actionEntityKilled = new ActionType(this, "entity_killed");
     private final ActionType actionEntityDeath = new ActionType(this, "entity_death");
     private final ActionType actionOnlineTimeSource = new ActionType(this, "online_time");
@@ -56,16 +58,9 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final BadgesConfig badgesConfig = new BadgesConfig(this);
     private final StatBadgeLang langConfig = new StatBadgeLang(this);
     private final PlayerOnlineTimeManager onlineTimeManager = new PlayerOnlineTimeManager(this, actionOnlineTimeSource);
-    private @Nullable StatManager statManager;
-    private @Nullable StatBadgeDatabase database;
     //
     private final Map<String, Supplier<PluginHook>> pluginHooks = new HashMap<>();
     private final List<PluginHook> hookedPlugins = new ArrayList<>();
-
-    @SuppressWarnings("unused")
-    public static StatManager getStatManager() {
-        return getPlugin(StatBadgePlugin.class).getStats();
-    }
 
     @Override
     public void onLoad() {
@@ -79,24 +74,26 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         statsConfig.load();
         badgesConfig.load();
         langConfig.load();
-        database = new SQLiteDatabase(getDataFolder(), new SQLiteDatabase.Config("test.db", Collections.emptyMap()));
-        statManager = new StatManager(this, database);
 
+        boolean result = false;
         try {
-            database.openConnection();
-            database.initDatabase();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            result = initStatManager();
+        } catch (Throwable e) {
+            getLogger().log(Level.SEVERE, "Failed to initialize plugin", e);
         }
 
         getServer().getPluginManager().registerEvents(this, this);
 
-        setupDefaultStats();
+        if (result) {
+            setupDefaultStats();
+        }
         setupHookPlugins();
         hookPlugins();
         onlineTimeManager.start();
         onlineTimeManager.loadOnlinePlayers((AFKProvider) hookedPlugins.stream().filter(hook -> hook instanceof AFKProvider).findFirst().orElse(null));
-        getServer().getOnlinePlayers().forEach(this::loadPlayer);
+        if (result) {
+            getServer().getOnlinePlayers().forEach(this::loadPlayer);
+        }
 
         commands.register(new StatBadgeCommand(this));
         commands.register(new BadgesCommand(this));
@@ -105,21 +102,117 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public void onDisable() {
         unhookPlugins();
-        onlineTimeManager.shutdown();
+        try {
+            onlineTimeManager.shutdown();
+        } catch (Throwable e) {
+            getLogger().log(Level.WARNING, "Exception in shutdown online time manager", e);
+        }
 
-        try {  // TODO: fix null
-            statManager.commitAndUnloadAll().get();
-            database.closeConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
+        try {
+            closeStatManager();
+        } catch (Throwable e) {
+            getLogger().log(Level.SEVERE, "Failed to cleanup plugin", e);
         }
 
         commands.close();
         ItemCustomModelData.clear();
     }
 
+    @Override
+    public boolean reloadStatBadge() {
+        getLogger().info("Reloading StatBadge config & database");
+        config.load();
+        statsConfig.load();
+        badgesConfig.load();
+        langConfig.load();
+        boolean result = initStatManager();
+        if (result) {
+            getServer().getOnlinePlayers().forEach(this::loadPlayer);
+            getLogger().info("Reload OK!");
+        } else {
+            getLogger().warning("Reload Failed!");
+        }
+        return result;
+    }
+
+    private boolean initStatManager() {
+        String dbType = config.getDatabaseType();
+
+        Supplier<StatBadgeDatabase> initializer = null;
+        StatBadgeDatabase database = statManager.getDatabase();
+
+        if ("mysql".equalsIgnoreCase(dbType)) {
+            if (!(database instanceof MySQLDatabase) || database.isClosed()) {
+                initializer = () -> new MySQLDatabase(config.getMySQLConfig());
+            }
+        } else if ("sqlite".equalsIgnoreCase(dbType)) {
+            if (!(database instanceof SQLiteDatabase) || database.isClosed()) {
+                initializer = () -> new SQLiteDatabase(getDataFolder(), config.getSQLiteConfig());
+            }
+        } else {
+            getLogger().severe("Unknown database type: " + dbType);
+            return false;
+        }
+
+        logDebug("Using " + dbType + " database");
+        try {
+            logDebug("Unloading stat manager");
+            try {
+                statManager.commitAndUnloadAll().get();
+            } catch (Throwable e) {
+                getLogger().log(Level.SEVERE, "Exception in commit stats (ignored)", e);
+            }
+            statManager.setDatabase(null);
+
+            if (initializer != null) {
+                if (database != null && !database.isClosed()) {
+                    logDebug("Closing database");
+                    try {
+                        database.closeConnection();
+                    } catch (Throwable e) {
+                        getLogger().log(Level.SEVERE, "Exception close database (ignored)", e);
+                    }
+                }
+
+                database = initializer.get();
+            }
+
+            if (database.isClosed()) {
+                logDebug("Starting database");
+                database.openConnection();
+                database.initDatabase();
+            }
+            statManager.setDatabase(database);
+
+        } catch (Throwable e) {
+            getLogger().log(Level.SEVERE, "Exception in reload stats manager", e);
+            return false;
+        }
+        return true;
+    }
+
+    private void closeStatManager() {
+        logDebug("Unloading stat manager");
+        try {
+            statManager.commitAndUnloadAll().get();
+        } catch (Throwable e) {
+            getLogger().log(Level.SEVERE, "Exception in commit stats", e);
+        }
+        StatBadgeDatabase database = statManager.getDatabase();
+        statManager.setDatabase(null);
+
+        if (database != null) {
+            logDebug("Closing database");
+            try {
+                database.closeConnection();
+            } catch (Exception e) {
+                getLogger().log(Level.SEVERE, "Error in close database: " + e);
+            }
+        }
+    }
+
     private void setupDefaultStats() {
-        StatManager statManager = getStats();
+        StatManager statManager = getStatManager();
         statManager.addPlayerActionStatsProvider(actionEntityKilled, new PlayerActionStatsProvider(this) {
             @Override
             public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
@@ -243,7 +336,14 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
 
     @Override
     public StatManager getStats() {
-        return Objects.requireNonNull(statManager, "StatManager not initialized");
+        if (statManager.isInitialized())
+            return statManager;
+        throw new RuntimeException("StatManager Database not initialized");
+    }
+
+    @Override
+    public StatManager getStatManager() {
+        return statManager;
     }
 
     @Override

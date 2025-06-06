@@ -3,14 +3,12 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsEntry;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
@@ -28,16 +26,16 @@ public class StatManager {
     private final Unsafe unsafe = new Unsafe();
     private final Object lock = new Object();
     private final StatBadgePluginInterface plugin;
-    private final StatBadgeDatabase database;
-    private @Nullable BukkitTask commitTimerTask;
     private final List<PlayerAction> actionCached = new ArrayList<>();
+    private @Nullable StatBadgeDatabase database;
+    private @Nullable BukkitTask commitTimerTask;
     //
     private final List<Badge<?>> playerBadges = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, PlayerStatsProvider> playerStatsProviders = new HashMap<>();
     private final Map<String, PlayerActionStatsProvider> playerActionStatsProviders = new HashMap<>();
 
 
-    public StatManager(StatBadgePluginInterface plugin, StatBadgeDatabase database) {
+    public StatManager(StatBadgePluginInterface plugin, @Nullable StatBadgeDatabase database) {
         this.plugin = plugin;
         this.database = database;
     }
@@ -46,6 +44,21 @@ public class StatManager {
         return plugin.getLogger();
     }
 
+    private StatBadgeDatabase getDatabaseOrThrow() {
+        return Objects.requireNonNull(database, "StatBadge Database not initialized");
+    }
+
+    public @Nullable StatBadgeDatabase getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(@Nullable StatBadgeDatabase database) {
+        this.database = database;
+    }
+
+    public boolean isInitialized() {
+        return database != null && !database.isClosed();
+    }
 
     private CompletableFuture<Void> commitAll() {
         return CompletableFuture.supplyAsync(() -> {
@@ -64,6 +77,7 @@ public class StatManager {
     }
 
     private void commitCachedActions() {
+        StatBadgeDatabase db = getDatabaseOrThrow();
         List<PlayerAction> actions;
         synchronized (lock) {
             // clear timer
@@ -78,7 +92,7 @@ public class StatManager {
         }
 
         try {
-            database.addActions(actions);
+            db.addActions(actions);
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Error in commit actions", e);
         }
@@ -86,7 +100,7 @@ public class StatManager {
 
     private void commitPlayerBadges() {
         try {
-            database.addBadges(playerBadges);
+            getDatabaseOrThrow().addBadges(playerBadges);
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Error in commit actions", e);
         }
@@ -132,6 +146,7 @@ public class StatManager {
      * プレイヤーのバッジをコミットしてアンロードします
      */
     public CompletableFuture<Boolean> unloadPlayer(Player player) {
+        StatBadgeDatabase db = getDatabaseOrThrow();
         List<Badge<?>> badges;
         synchronized (lock) {
             badges = playerBadges.stream().filter(b -> b.getPlayer().equals(player.getUniqueId())).toList();
@@ -145,7 +160,7 @@ public class StatManager {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                database.addBadges(badges);
+                db.addBadges(badges);
             } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Exception in unload player: " + player.getUniqueId(), e);
                 throw new RuntimeException(e);
@@ -218,6 +233,7 @@ public class StatManager {
     }
 
     private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
+        StatBadgeDatabase db = getDatabaseOrThrow();
         Map<String, BadgeEntry> configBadges = new HashMap<>(plugin.getBadgesConfig().badges());
         Map<String, StatsEntry> configStats = new HashMap<>(plugin.getStatsConfig().stats());
 
@@ -229,7 +245,7 @@ public class StatManager {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 commitCachedActions();
-                return database.loadPlayerBadges(player, configBadges.keySet());
+                return db.loadPlayerBadges(player, configBadges.keySet());
             } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Exception in load player badges", e);
                 throw new RuntimeException(e);
@@ -248,7 +264,7 @@ public class StatManager {
                 try {
                     playerStats = createPlayerStats(player, statsEntry).orElse(null);
                 } catch (Throwable e) {
-                    e.printStackTrace();  // TODO: error handling
+                    getLogger().log(Level.SEVERE, "Exception in create player stats: " + statsEntry.id(), e);
                     return;
                 }
 
@@ -271,7 +287,7 @@ public class StatManager {
                     if (playerStats instanceof PlayerActionStats) {
                         try {
                             //noinspection unchecked
-                            database.loadActionStatsTo((Badge<PlayerActionStats>) badge);
+                            db.loadActionStatsTo((Badge<PlayerActionStats>) badge);
                         } catch (SQLException e) {
                             getLogger().log(Level.SEVERE, "Exception in load player actions", e);
                             throw new RuntimeException(e);
@@ -416,11 +432,6 @@ public class StatManager {
 
     public String completeAliasedType(String type) {
         return type.contains(":") ? type : plugin.getPlugin().getName().toLowerCase(Locale.ROOT) + ":" + type;
-    }
-
-    public void removeBadge(Player player, @NotNull String arg) {  // TODO: remove test
-        playerBadges.removeIf(b -> b.getId().equals(arg));
-        ((SQLiteDatabase) database).removeBadge(player, arg);
     }
 
 

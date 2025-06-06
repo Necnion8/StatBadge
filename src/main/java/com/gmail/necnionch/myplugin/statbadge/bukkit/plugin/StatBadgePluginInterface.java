@@ -28,9 +28,13 @@ public interface StatBadgePluginInterface {
 
     @Nullable Player getPlayer(UUID playerId);
 
+    boolean reloadStatBadge();
+
     Collection<? extends Player> getOnlinePlayers();
 
     StatManager getStats();
+
+    StatManager getStatManager();
 
     PlayerOnlineTimeManager getPlayerOnlineTimeManager();
 

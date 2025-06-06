@@ -15,19 +15,17 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class PlayerOnlineTimeManager implements Listener {
 
     private final StatBadgePluginInterface plugin;
-    private final Logger log;
     private final Map<Player, PlayerTimer> players = new HashMap<>();
     private final ActionType actionType;
 
     public PlayerOnlineTimeManager(StatBadgePluginInterface plugin, ActionType actionType) {
         this.plugin = plugin;
-        this.log = plugin.getLogger();
         this.actionType = actionType;
     }
 
@@ -52,8 +50,11 @@ public class PlayerOnlineTimeManager implements Listener {
      */
     public void shutdown() {
         HandlerList.unregisterAll(this);
-        commitPlayerTimerAll();
-        players.clear();
+        try {
+            commitPlayerTimerAll();
+        } finally {
+            players.clear();
+        }
     }
 
     public void loadOnlinePlayers(@Nullable AFKProvider afkProvider) {
@@ -89,14 +90,18 @@ public class PlayerOnlineTimeManager implements Listener {
 
     private void commitPlayerTimerAll() {
         Instant now = Instant.now();
-        getStats().unsafe().addActionsToDatabase(players.entrySet().stream()
+        List<PlayerAction> actions = players.entrySet().stream()
                 .map(e -> {
                     PlayerTimer timer = e.getValue();
                     long duration = now.toEpochMilli() - timer.startTime.toEpochMilli();
                     String afk = timer.afk ? PlayerOnlineActionStats.KEY_AFK_ON : PlayerOnlineActionStats.KEY_AFK_OFF;
                     return new PlayerAction(e.getKey().getUniqueId(), actionType, now, afk, null, null, duration);
                 })
-                .toList());
+                .toList();
+
+        if (!actions.isEmpty()) {
+            getStats().unsafe().addActionsToDatabase(actions);
+        }
     }
 
     private void clearPlayerTimer(Player player) {

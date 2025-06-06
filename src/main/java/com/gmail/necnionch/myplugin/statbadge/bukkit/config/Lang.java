@@ -18,6 +18,8 @@ public enum Lang {
     COMMAND_BADGE_LIST_ITEM_NAME("&7表示: "),
     COMMAND_BADGE_LIST_ITEM_DESCRIPTION("&7説明:"),
     COMMAND_BADGES_EMPTY("&c獲得した称号はまだありません"),
+    COMMAND_RELOAD("&6StatBadgeプラグインを再読み込みしました！"),
+    COMMAND_RELOAD_ERROR("&c再読み込みに失敗しました。ログを確認してください。"),
     COMMAND_PLAYER_ARGUMENT("&cプレイヤーを指定してください"),
     COMMAND_UNKNOWN_BADGE("&c称号 &6%1$s &cが見つかりません"),
     COMMAND_UNKNOWN_PLAYER("&cプレイヤーが見つかりません"),

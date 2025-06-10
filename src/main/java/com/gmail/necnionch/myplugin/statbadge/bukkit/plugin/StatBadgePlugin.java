@@ -261,6 +261,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         pluginHooks.put("MythicMobs", () -> new MythicMobsHook(this, "MythicMobs", getLogger()));
         pluginHooks.put("Lands", () -> new LandsHook(this, "Lands", getLogger()));
         pluginHooks.put("AFKPlus", () -> new AFKPlusHook(this, "AFKPlus", getLogger()));
+        pluginHooks.put("PlaceholderAPI", () -> new PlaceholderAPIHook(this, "PlaceholderAPI"));
     }
 
     private void hookPlugins() {

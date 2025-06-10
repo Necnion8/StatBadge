@@ -223,7 +223,7 @@ public class BadgeListGUI implements Listener {
             if (0 <= badgeIndex && badgeIndex < badges.size()) {
                 Badge<?> badge = badges.get(badgeIndex);
                 if (badge.isCompleted()) {
-                    plugin.getStats().selectBadgeTitle(player.getUniqueId(), badge.isTitleSet() ? badge : null);
+                    plugin.getStats().selectBadgeTitle(player.getUniqueId(), badge.isTitleSet() ? null : badge);
                     fillSlots();
                 }
             }

@@ -44,6 +44,10 @@ public enum Lang {
     UI_BADGE_LIST_ITEM_TITLE_SELECTED("&e(表示) &f称号 &6%3$s  &a(獲得)"),
     UI_BADGE_LIST_ITEM_DESCRIPTION_SELECTED("&7%4$s\n\n&f目標数:  %5$s"),
     NOTIFY_BADGE_COMPLETED("&e称号 &6%3$s &eを獲得しました！"),
+    PLACEHOLDER_VALUE_NOT_COMPLETE("&3未達成"),
+    PLACEHOLDER_VALUE_COMPLETE("&6達成済み"),
+    PLACEHOLDER_VALUE_PROGRESS("%1$.0f%%"),
+    PLACEHOLDER_NOT_SET_BADGE("&7称号なし"),
     ;
 
     private final String defaultText;

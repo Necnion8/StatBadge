@@ -27,6 +27,9 @@ repositories {
 
     // AFKPlus
     maven { url = "https://maven.lapismc.net/repository/maven/" }
+
+    // PlaceholderAPI
+    maven { url = 'https://repo.extendedclip.com/releases/' }
 }
 
 dependencies {
@@ -36,10 +39,10 @@ dependencies {
     compileOnly "net.kyori:adventure-api:4.21.0"
     implementation "net.kyori:adventure-text-serializer-legacy:4.21.0" exclude group: "net.kyori"
 
-
     compileOnly "com.github.angeschossen:LandsAPI:7.10.13"
     compileOnly 'io.lumine:Mythic-Dist:5.6.1'
     compileOnly "net.lapismc:AFKPlus:3.4.5"
+    compileOnly 'me.clip:placeholderapi:2.11.6'
 }
 
 tasks.named("shadowJar", ShadowJar) {

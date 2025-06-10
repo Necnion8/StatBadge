@@ -117,6 +117,10 @@ public class StatManager {
         return streamPlayerBadges(player).filter(Badge::isCompleted);
     }
 
+    public Stream<Badge<?>> streamCompletedPlayerBadgeTitles(UUID player) {
+        return streamCompletedPlayerBadges(player).filter(Badge::isTitleSet);
+    }
+
     public List<Badge<?>> getPlayerBadges(UUID player) {
         return streamPlayerBadges(player).toList();
     }
@@ -275,7 +279,7 @@ public class StatManager {
                 if (partial != null) {
                     Instant startTime = partial.startTime().map(Instant::ofEpochMilli).orElse(null);
                     Instant completeTime = partial.completeTime().map(Instant::ofEpochMilli).orElse(null);
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime);
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime, partial.titleSet());
 
                     if (playerStats instanceof PlayerActionStats) {
                         try {
@@ -288,7 +292,7 @@ public class StatManager {
                     }
 
                 } else {
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null);
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, partial.titleSet());
                 }
 
                 badges.add(badge);
@@ -412,6 +416,16 @@ public class StatManager {
 
     public @Nullable Badge<?> revokeBadge(Player player, String badgeId) {
         return revokeBadge(player, badgeId, Instant.now());
+    }
+
+    public void selectBadgeTitle(UUID playerId, @Nullable Badge<?> badge) {
+        if (badge != null && !playerId.equals(badge.getPlayer()))
+            return;
+        streamPlayerBadges(playerId).forEach(b -> b.setTitleSet(b.equals(badge)));
+    }
+
+    public @Nullable Badge<?> getSelectBadgeTitle(UUID playerId) {
+        return streamCompletedPlayerBadgeTitles(playerId).findFirst().orElse(null);
     }
 
     // utility

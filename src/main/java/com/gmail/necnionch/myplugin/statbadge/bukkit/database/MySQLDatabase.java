@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +72,38 @@ public class MySQLDatabase extends SQLDatabase {
     }
 
 
+    public void initDatabase() throws SQLException {
+        try (Connection connection = getConnection(false)) {
+            String sql = "CREATE TABLE IF NOT EXISTS `player_actions` (" +
+                    "`player` VARCHAR(36) NOT NULL," +
+                    "`plugin` TEXT NOT NULL," +
+                    "`type` TEXT NOT NULL," +
+                    "`time` BIGINT NOT NULL," +
+                    "`key1` TEXT," +
+                    "`key2` TEXT," +
+                    "`key3` TEXT," +
+                    "`value` BIGINT NOT NULL" +
+                    ");";
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeUpdate(sql);
+            }
+
+            sql = "CREATE TABLE IF NOT EXISTS `player_badges` (" +
+                    "`player` VARCHAR(36) NOT NULL," +
+                    "`id` TEXT NOT NULL," +
+                    "`start_time` BIGINT," +
+                    "`complete_time` BIGINT," +
+                    "`title_set` BIT(1)," +
+                    "UNIQUE (`player`, `id`)" +
+                    ");";
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeUpdate(sql);
+            }
+        }
+    }
+
     public void addBadges(List<Badge<?>> badges) throws SQLException {
-        String sql = "INSERT INTO `player_badges` VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `start_time` = ?, `complete_time` = ?";
+        String sql = "INSERT INTO `player_badges` VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `start_time` = ?, `complete_time` = ?";
         try (Connection conn = getConnectionTry();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -81,8 +112,9 @@ public class MySQLDatabase extends SQLDatabase {
                 stmt.setString(2, badge.getId());
                 stmt.setLong(3, Optional.ofNullable(badge.getStartTime()).map(Instant::toEpochMilli).orElse(0L));
                 stmt.setLong(4, Optional.ofNullable(badge.getCompleteTime()).map(Instant::toEpochMilli).orElse(0L));
-                stmt.setLong(5, Optional.ofNullable(badge.getStartTime()).map(Instant::toEpochMilli).orElse(0L));
-                stmt.setLong(6, Optional.ofNullable(badge.getCompleteTime()).map(Instant::toEpochMilli).orElse(0L));
+                stmt.setInt(5, badge.isTitleSet() ? 1 : 0);
+                stmt.setLong(6, Optional.ofNullable(badge.getStartTime()).map(Instant::toEpochMilli).orElse(0L));
+                stmt.setLong(7, Optional.ofNullable(badge.getCompleteTime()).map(Instant::toEpochMilli).orElse(0L));
                 stmt.executeUpdate();
             }
         }

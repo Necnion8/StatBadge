@@ -18,14 +18,16 @@ public class Badge<S extends PlayerStats> {
     private final S stats;
     private @Nullable Instant startTime;
     private @Nullable Instant completeTime;
+    private boolean titleSet;
 
-    public Badge(String id, BadgeEntry config, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime) {
+    public Badge(String id, BadgeEntry config, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, boolean titleSet) {
         this.id = id;
         this.config = config;
         this.player = player;
         this.stats = stats;
         this.startTime = startTime;
         this.completeTime = completeTime;
+        this.titleSet = titleSet;
     }
 
     public String getId() {
@@ -58,6 +60,14 @@ public class Badge<S extends PlayerStats> {
 
     public boolean isCompleted() {
         return completeTime != null;  // 未来の値だったら未達成と見なす？
+    }
+
+    public boolean isTitleSet() {
+        return titleSet;
+    }
+
+    public void setTitleSet(boolean titleSet) {
+        this.titleSet = titleSet;
     }
 
 
@@ -95,10 +105,11 @@ public class Badge<S extends PlayerStats> {
                 + ", targetValue=" + stats.getTargetValue()
                 + ", start=" + Optional.ofNullable(startTime).map(Instant::toString).orElse("null")
                 + ", complete=" + Optional.ofNullable(completeTime).map(Instant::toString).orElse("null")
+                + ", title=" + titleSet
                 + "}";
     }
 
-    public record Partial(UUID player, String id, Optional<Long> startTime, Optional<Long> completeTime) {
+    public record Partial(UUID player, String id, Optional<Long> startTime, Optional<Long> completeTime, boolean titleSet) {
     }
 
 }

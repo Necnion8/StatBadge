@@ -39,6 +39,7 @@ public abstract class SQLDatabase implements StatBadgeDatabase {
                     "`id` TEXT NOT NULL," +
                     "`start_time` BIGINT," +
                     "`complete_time` BIGINT," +
+                    "`title_set` INTEGER," +
                     "UNIQUE (`player`, `id`)" +
                     ");";
             try (Statement stmt = connection.createStatement()) {
@@ -67,7 +68,7 @@ public abstract class SQLDatabase implements StatBadgeDatabase {
     }
 
     public void addBadges(List<Badge<?>> badges) throws SQLException {
-        String sql = "INSERT OR REPLACE INTO `player_badges` VALUES (?, ?, ?, ?)";
+        String sql = "INSERT OR REPLACE INTO `player_badges` VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = getConnectionTry();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -76,6 +77,7 @@ public abstract class SQLDatabase implements StatBadgeDatabase {
                 stmt.setString(2, badge.getId());
                 stmt.setLong(3, Optional.ofNullable(badge.getStartTime()).map(Instant::toEpochMilli).orElse(0L));
                 stmt.setLong(4, Optional.ofNullable(badge.getCompleteTime()).map(Instant::toEpochMilli).orElse(0L));
+                stmt.setInt(5, badge.isTitleSet() ? 1 : 0);
                 stmt.executeUpdate();
             }
         }
@@ -195,7 +197,7 @@ public abstract class SQLDatabase implements StatBadgeDatabase {
     }
 
     public Map<String, Badge.Partial> loadPlayerBadges(UUID player, Set<String> ids) throws SQLException {
-        String sql = "SELECT `player`, `id`, `start_time`, `complete_time` FROM `player_badges` WHERE `player` = ?";
+        String sql = "SELECT `player`, `id`, `start_time`, `complete_time`, `title_set` FROM `player_badges` WHERE `player` = ?";
         sql += "AND `id` in (" + ids.stream().map(s -> "?").collect(Collectors.joining(",")) + ")";
 
         try (Connection conn = getConnectionTry();
@@ -214,7 +216,8 @@ public abstract class SQLDatabase implements StatBadgeDatabase {
                     Optional<Long> startTime = v != 0 ? Optional.of(v) : Optional.empty();
                     v = resultSet.getLong(4);
                     Optional<Long> completeTime = v != 0 ? Optional.of(v) : Optional.empty();
-                    badges.put(id, new Badge.Partial(player, id, startTime, completeTime));
+                    boolean titleSet = 0 < resultSet.getInt(5);
+                    badges.put(id, new Badge.Partial(player, id, startTime, completeTime, titleSet));
                 }
                 return badges;
             }

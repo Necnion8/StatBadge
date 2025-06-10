@@ -137,9 +137,11 @@ public class BadgeListGUI implements Listener {
                 Optional.ofNullable(badge.getCompleteTime()).map(t -> lang.formatDateTime(t, true, false)).orElse("?"),
                 stats.getTargetValue() != 0 ? Math.max(0, (double) stats.getValue() / stats.getTargetValue() * 100) : 0
         };
-        // TODO: change selected badge
-        Component title = lang.format(badge.isCompleted() ? Lang.UI_BADGE_LIST_ITEM_TITLE_COMPLETED : Lang.UI_BADGE_LIST_ITEM_TITLE, args);
-        Component desc = lang.format(badge.isCompleted() ? Lang.UI_BADGE_LIST_ITEM_DESCRIPTION_COMPLETED : Lang.UI_BADGE_LIST_ITEM_DESCRIPTION, args);
+
+        Lang key = badge.isCompleted() ? (badge.isTitleSet() ? Lang.UI_BADGE_LIST_ITEM_TITLE_SELECTED : Lang.UI_BADGE_LIST_ITEM_TITLE_COMPLETED): Lang.UI_BADGE_LIST_ITEM_TITLE;
+        Component title = lang.format(key, args);
+        key = badge.isCompleted() ? (badge.isTitleSet() ? Lang.UI_BADGE_LIST_ITEM_DESCRIPTION_SELECTED : Lang.UI_BADGE_LIST_ITEM_DESCRIPTION_COMPLETED) : Lang.UI_BADGE_LIST_ITEM_DESCRIPTION;
+        Component desc = lang.format(key, args);
 
         itemMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', serializer.serialize(title)));
         itemMeta.setLore(Arrays.asList(ChatColor.translateAlternateColorCodes('&', serializer.serialize(desc)).split("\n")));
@@ -213,6 +215,17 @@ public class BadgeListGUI implements Listener {
             } catch (Throwable e) {
                 plugin.getLogger().log(Level.SEVERE, "Exception in update to next page ui", e);
                 close(true);
+            }
+
+        } else {
+            int count = pageable ? inventory.getSize() - 9 : inventory.getSize();
+            int badgeIndex = currentPage * count + event.getRawSlot();
+            if (0 <= badgeIndex && badgeIndex < badges.size()) {
+                Badge<?> badge = badges.get(badgeIndex);
+                if (badge.isCompleted()) {
+                    plugin.getStats().selectBadgeTitle(player.getUniqueId(), badge.isTitleSet() ? badge : null);
+                    fillSlots();
+                }
             }
         }
     }

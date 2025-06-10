@@ -2,7 +2,6 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgeEntry;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsEntry;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.event.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.*;
@@ -218,24 +217,23 @@ public class StatManager {
 
     //
 
-    private Optional<PlayerStats> createPlayerStats(UUID player, StatsEntry entry) {
+    private Optional<PlayerStats> createPlayerStats(UUID player, BadgeEntry.Stats entry) {
         String statsType = completeAliasedType(entry.type());
         if (statsType.equals(PlayerActionStats.STATS_TYPE.toString()))
             return createPlayerActionStats(player, entry).map(s -> s);
         return getPlayerStatsProvider(statsType)
-                .map(p -> p.create(player, entry.id(), entry.config()));
+                .map(p -> p.create(player, entry.config()));
     }
 
-    private Optional<PlayerActionStats> createPlayerActionStats(UUID player, StatsEntry entry) {
+    private Optional<PlayerActionStats> createPlayerActionStats(UUID player, BadgeEntry.Stats entry) {
         String actionType = completeAliasedType(Objects.requireNonNull(entry.config().getString("action"), "Required 'action' type"));
         return getPlayerActionStatsProvider(actionType)
-                .map(p -> p.create(player, entry.id(), entry.config()));
+                .map(p -> p.create(player, entry.config()));
     }
 
     private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
         StatBadgeDatabase db = getDatabaseOrThrow();
         Map<String, BadgeEntry> configBadges = new HashMap<>(plugin.getBadgesConfig().badges());
-        Map<String, StatsEntry> configStats = new HashMap<>(plugin.getStatsConfig().stats());
 
         if (configBadges.isEmpty()) {
             playerBadges.clear();
@@ -254,17 +252,12 @@ public class StatManager {
             List<Badge<?>> badges = new ArrayList<>();
 
             configBadges.forEach((id, badgeEntry) -> {
-                StatsEntry statsEntry = configStats.get(badgeEntry.statsType());
-                if (statsEntry == null) {
-                    getLogger().warning("Unable to init badge: " + badgeEntry.id() + ": Unknown stats: " + badgeEntry.statsType());
-                    return;
-                }
-
+                BadgeEntry.Stats statsEntry = badgeEntry.stats();
                 PlayerStats playerStats;
                 try {
                     playerStats = createPlayerStats(player, statsEntry).orElse(null);
                 } catch (Throwable e) {
-                    getLogger().log(Level.SEVERE, "Exception in create player stats: " + statsEntry.id(), e);
+                    getLogger().log(Level.SEVERE, "Exception in create player stats: " + statsEntry.type() + " (badge: " + badgeEntry.id() + ")", e);
                     return;
                 }
 
@@ -282,7 +275,7 @@ public class StatManager {
                 if (partial != null) {
                     Instant startTime = partial.startTime().map(Instant::ofEpochMilli).orElse(null);
                     Instant completeTime = partial.completeTime().map(Instant::ofEpochMilli).orElse(null);
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime, badgeEntry.statsValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime, badgeEntry.stats().targetValue());
 
                     if (playerStats instanceof PlayerActionStats) {
                         try {
@@ -295,7 +288,7 @@ public class StatManager {
                     }
 
                 } else {
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, badgeEntry.statsValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, badgeEntry.stats().targetValue());
                 }
 
                 badges.add(badge);
@@ -377,14 +370,6 @@ public class StatManager {
 
         badge.setCompleteTime(time);
         plugin.callEvent(new PlayerBadgeCompleteEvent(player, badge));
-    }
-
-    public Collection<BadgeEntry> getBadges() {
-        return Collections.unmodifiableCollection(plugin.getBadgesConfig().badges().values());
-    }
-
-    public Collection<StatsEntry> getStats() {
-        return Collections.unmodifiableCollection(plugin.getStatsConfig().stats().values());
     }
 
     public Optional<Badge<?>> getPlayerBadge(UUID player, String badgeId) {

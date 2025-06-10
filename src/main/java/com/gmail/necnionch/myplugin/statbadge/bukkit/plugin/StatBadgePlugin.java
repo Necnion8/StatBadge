@@ -6,7 +6,6 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.command.StatBadgeCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatsConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.MySQLDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
@@ -54,7 +53,6 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     private final ActionType actionOnlineTime = new ActionType(this, "online_time");
     private final ActionType actionPlayTime = new ActionType(this, "play_time");
     private final StatBadgeConfig config = new StatBadgeConfig(this);
-    private final StatsConfig statsConfig = new StatsConfig(this);
     private final BadgesConfig badgesConfig = new BadgesConfig(this);
     private final StatBadgeLang langConfig = new StatBadgeLang(this);
     private final PlayerOnlineTimeManager onlineTimeManager = new PlayerOnlineTimeManager(this, actionOnlineTimeSource);
@@ -71,7 +69,6 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public void onEnable() {
         config.load();
-        statsConfig.load();
         badgesConfig.load();
         langConfig.load();
 
@@ -122,7 +119,6 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     public boolean reloadStatBadge() {
         getLogger().info("Reloading StatBadge config & database");
         config.load();
-        statsConfig.load();
         badgesConfig.load();
         langConfig.load();
         boolean result = initStatManager();
@@ -215,7 +211,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         StatManager statManager = getStatManager();
         statManager.addPlayerActionStatsProvider(actionEntityKilled, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 String entityTypeName = Optional.ofNullable(config.getString("entity")).orElse("").toUpperCase(Locale.ROOT);
                 EntityType entityType;
                 try {
@@ -228,7 +224,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         });
         statManager.addPlayerActionStatsProvider(actionEntityDeath, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 String entityTypeName = Optional.ofNullable(config.getString("entity")).orElse("").toUpperCase(Locale.ROOT);
                 EntityType entityType;
                 try {
@@ -241,13 +237,13 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         });
         statManager.addPlayerActionStatsProvider(actionOnlineTime, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, false);
             }
         });
         statManager.addPlayerActionStatsProvider(actionPlayTime, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, true);
             }
         });
@@ -307,11 +303,6 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public Plugin getPlugin() {
         return this;
-    }
-
-    @Override
-    public StatsConfig getStatsConfig() {
-        return statsConfig;
     }
 
     @Override

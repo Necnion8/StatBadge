@@ -44,14 +44,14 @@ public class MythicMobsHook extends PluginHook implements Listener {
         StatManager stats = this.plugin.getStatManager();
         stats.addPlayerActionStatsProvider(actionKilled, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) {
                 return new PlayerMobActionStats(playerId, actionKilled, 0, config.getString("mob"));
             }
         });
 
         stats.addPlayerActionStatsProvider(actionDeath, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) {
                 return new PlayerMobActionStats(playerId, actionDeath, 0, config.getString("mob"));
             }
         });

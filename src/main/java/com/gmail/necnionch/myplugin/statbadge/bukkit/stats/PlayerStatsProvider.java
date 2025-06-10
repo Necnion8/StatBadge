@@ -17,6 +17,6 @@ public abstract class PlayerStatsProvider {
         return plugin;
     }
 
-    public abstract PlayerStats create(UUID playerId, String statsId, ConfigurationSection config);
+    public abstract PlayerStats create(UUID playerId, ConfigurationSection config);
 
 }

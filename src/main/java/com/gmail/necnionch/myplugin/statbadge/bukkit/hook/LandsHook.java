@@ -47,19 +47,19 @@ public class LandsHook extends PluginHook implements Listener {
         lands = LandsIntegration.of(this.plugin.getPlugin());
         stats.addPlayerStatsProvider(statsLandChunks, new PlayerStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerStats create(UUID playerId, String statsId, ConfigurationSection config) {
+            public PlayerStats create(UUID playerId, ConfigurationSection config) {
                 return new PlayerStats(playerId, statsLandChunks, getOwnLandChunkCountOrZero(playerId));
             }
         });
         stats.addPlayerActionStatsProvider(actionWarWins, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 return new PlayerLandWarCount(playerId, actionWarWins, 0);
             }
         });
         stats.addPlayerActionStatsProvider(actionWarLoses, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, String statsId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
                 return new PlayerLandWarCount(playerId, actionWarLoses, 0);
             }
         });

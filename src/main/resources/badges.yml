@@ -1,6 +1,28 @@
-mythic_skeleton_kill:  # badge id
-  name: "&6Skeleton Kills"  # GUI等での表示名
-  description: "Kill skeleton"  # GUI等での説明文
-  title: ""  # ネームタグやサイドボードでの表示
-  stats: mythicmobs_killed_skeleton_king  # stats id
-  stats-value: 10
+skeleton_kills:  # badge id
+  # 称号名 (カラーコード可)
+  name: "&6Skeleton Kills"
+  # 称号タグ (カラーコード可)
+  title: ""
+  # 説明文 (カラーコード、複数行可)
+  description: "Kill skeleton"
+
+  # GUIで表示される称号アイコンの見た目を設定します
+  icon:
+    # アイテムID
+    type: apple
+    # カスタムテクスチャ用の値を設定できます (1.14以降のみ)
+    custom-model-data: 123
+  # ※ アイテムIDのみ指定する場合のみ、以下のように指定することもできます
+  ## icon: apple
+
+  # 称号の獲得に必要な目標を設定します
+  stats:
+    # 統計タイプ (他プラグインによって拡張対応します)
+    type: action  # action の場合は省略可
+    # actionタイプの統計には以下の設定が必要です
+    action: entity_killed  # アクションのタイプ (他プラグインによって拡張対応します)
+    # 統計の目標値。この値を超えると称号が与えられます
+    value: 10
+    # アクション entity_killed には以下の設定が必要です
+    # ※ アクションによって必要な設定項目が異なるため、StatBadgeプラグインの説明ページを参照して設定してください。
+    mob: "SkeletonKing"

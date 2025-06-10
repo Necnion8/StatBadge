@@ -80,11 +80,15 @@ public class Badge<S extends PlayerStats> {
     }
 
     public Material getIcon() {
-        return config.icon();
+        return config.icon().type();
     }
 
     public @Nullable Object getIconCustomModelData() {
-        return config.iconCustomModelData();
+        return config.icon().customModelData();
+    }
+
+    public BadgeEntry getConfig() {
+        return config;
     }
 
 

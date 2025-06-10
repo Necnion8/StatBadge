@@ -38,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -211,7 +212,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         StatManager statManager = getStatManager();
         statManager.addPlayerActionStatsProvider(actionEntityKilled, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
                 String entityTypeName = Optional.ofNullable(config.getString("entity")).orElse("").toUpperCase(Locale.ROOT);
                 EntityType entityType;
                 try {
@@ -219,12 +220,12 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                 } catch (IllegalArgumentException e) {
                     throw new ConfigurationError("Unknown entity type: " + entityTypeName, e);
                 }
-                return new PlayerMobActionStats(playerId, actionEntityKilled, 0, entityType);
+                return new PlayerMobActionStats(playerId, actionEntityKilled, 0, targetValue, entityType);
             }
         });
         statManager.addPlayerActionStatsProvider(actionEntityDeath, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
                 String entityTypeName = Optional.ofNullable(config.getString("entity")).orElse("").toUpperCase(Locale.ROOT);
                 EntityType entityType;
                 try {
@@ -232,19 +233,21 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                 } catch (IllegalArgumentException e) {
                     throw new ConfigurationError("Unknown entity type: " + entityTypeName, e);
                 }
-                return new PlayerMobActionStats(playerId, actionEntityDeath, 0, entityType);
+                return new PlayerMobActionStats(playerId, actionEntityDeath, 0, targetValue, entityType);
             }
         });
         statManager.addPlayerActionStatsProvider(actionOnlineTime, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
-                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, false);
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
+                long duration = TimeUnit.HOURS.toMillis(targetValue);
+                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, duration, false);
             }
         });
         statManager.addPlayerActionStatsProvider(actionPlayTime, new PlayerActionStatsProvider(this) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
-                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, true);
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
+                long duration = TimeUnit.HOURS.toMillis(targetValue);
+                return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, duration, true);
             }
         });
         getServer().getPluginManager().registerEvents(new PlayerMobEventListener(statManager, actionEntityKilled, actionEntityDeath), this);

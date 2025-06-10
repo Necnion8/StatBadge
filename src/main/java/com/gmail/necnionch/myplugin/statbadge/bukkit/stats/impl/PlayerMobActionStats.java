@@ -11,8 +11,8 @@ import java.util.UUID;
 public class PlayerMobActionStats extends PlayerActionStats {
     private final EntityType entityType;
 
-    public PlayerMobActionStats(UUID playerId, ActionType actionType, long value, EntityType entityType) {
-        super(playerId, actionType, value);
+    public PlayerMobActionStats(UUID playerId, ActionType actionType, long value, long targetValue, EntityType entityType) {
+        super(playerId, actionType, value, targetValue);
         this.entityType = entityType;
     }
 

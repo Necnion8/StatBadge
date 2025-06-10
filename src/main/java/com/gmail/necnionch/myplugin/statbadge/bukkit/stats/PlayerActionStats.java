@@ -18,8 +18,8 @@ public abstract class PlayerActionStats extends PlayerStats {
     public static final StatsType STATS_TYPE = new StatsType(JavaPlugin.getProvidingPlugin(StatBadgePlugin.class), "action");
     private final ActionType sourceActionType;
 
-    public PlayerActionStats(UUID playerId, ActionType sourceActionType, long value) {
-        super(playerId, STATS_TYPE, value);
+    public PlayerActionStats(UUID playerId, ActionType sourceActionType, long value, long targetValue) {
+        super(playerId, STATS_TYPE, value, targetValue);
         this.sourceActionType = sourceActionType;
     }
 

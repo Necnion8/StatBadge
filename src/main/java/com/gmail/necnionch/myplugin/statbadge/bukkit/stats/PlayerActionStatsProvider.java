@@ -17,7 +17,7 @@ public abstract class PlayerActionStatsProvider {
         return plugin;
     }
 
-    public abstract PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError;
+    public abstract PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError;
 
 
     public static class ConfigurationError extends Error {

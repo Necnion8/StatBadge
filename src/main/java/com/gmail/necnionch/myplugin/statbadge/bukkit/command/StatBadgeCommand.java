@@ -6,6 +6,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatManager;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.JoinConfiguration;
@@ -69,11 +70,12 @@ public class StatBadgeCommand extends Command {
                 .map(t -> lang.formatDateTime(t, true, false))
                 .orElse("?");
 
-        String value = badge.getStats().formatValue(lang, badge.getStats().getValue());
-        String targetValue = badge.getStats().formatValue(lang, badge.getTargetValue());
+        PlayerStats stats = badge.getStats();
+        String value = stats.formatValue(lang, stats.getValue());
+        String targetValue = stats.formatValue(lang, stats.getTargetValue());
         double progress = 0;
-        if (badge.getTargetValue() != 0) {
-            progress = (double) badge.getStats().getValue() / badge.getTargetValue() * 100;
+        if (stats.getTargetValue() != 0) {
+            progress = (double) stats.getValue() / stats.getTargetValue() * 100;
             progress = Math.max(0, progress);
         }
 

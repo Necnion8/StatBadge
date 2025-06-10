@@ -18,16 +18,14 @@ public class Badge<S extends PlayerStats> {
     private final S stats;
     private @Nullable Instant startTime;
     private @Nullable Instant completeTime;
-    private final long targetValue;
 
-    public Badge(String id, BadgeEntry config, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime, long targetValue) {
+    public Badge(String id, BadgeEntry config, UUID player, S stats, @Nullable Instant startTime, @Nullable Instant completeTime) {
         this.id = id;
         this.config = config;
         this.player = player;
         this.stats = stats;
         this.startTime = startTime;
         this.completeTime = completeTime;
-        this.targetValue = targetValue;
     }
 
     public String getId() {
@@ -56,10 +54,6 @@ public class Badge<S extends PlayerStats> {
 
     public void setCompleteTime(@Nullable Instant time) {
         this.completeTime = time;
-    }
-
-    public long getTargetValue() {
-        return targetValue;
     }
 
     public boolean isCompleted() {
@@ -98,7 +92,7 @@ public class Badge<S extends PlayerStats> {
                 + ", stats=\"" + stats.getType().toString() + "\""
                 + (stats instanceof PlayerActionStats ? ", action=\"" + ((PlayerActionStats) stats).getSourceActionType() + "\"" : "")
                 + ", value=" + stats.getValue()
-                + ", targetValue=" + targetValue
+                + ", targetValue=" + stats.getTargetValue()
                 + ", start=" + Optional.ofNullable(startTime).map(Instant::toString).orElse("null")
                 + ", complete=" + Optional.ofNullable(completeTime).map(Instant::toString).orElse("null")
                 + "}";

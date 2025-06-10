@@ -44,15 +44,15 @@ public class MythicMobsHook extends PluginHook implements Listener {
         StatManager stats = this.plugin.getStatManager();
         stats.addPlayerActionStatsProvider(actionKilled, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) {
-                return new PlayerMobActionStats(playerId, actionKilled, 0, config.getString("mob"));
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) {
+                return new PlayerMobActionStats(playerId, actionKilled, 0, targetValue, config.getString("mob"));
             }
         });
 
         stats.addPlayerActionStatsProvider(actionDeath, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) {
-                return new PlayerMobActionStats(playerId, actionDeath, 0, config.getString("mob"));
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) {
+                return new PlayerMobActionStats(playerId, actionDeath, 0, targetValue, config.getString("mob"));
             }
         });
 
@@ -123,8 +123,8 @@ public class MythicMobsHook extends PluginHook implements Listener {
 
         private final String mobType;
 
-        public PlayerMobActionStats(UUID playerId, ActionType actionType, long value, String mobType) {
-            super(playerId, actionType, value);
+        public PlayerMobActionStats(UUID playerId, ActionType actionType, long value, long targetValue, String mobType) {
+            super(playerId, actionType, value, targetValue);
             this.mobType = mobType;
         }
 

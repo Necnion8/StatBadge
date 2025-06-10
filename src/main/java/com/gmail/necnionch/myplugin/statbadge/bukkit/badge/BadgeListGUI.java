@@ -4,6 +4,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePlugin;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.util.ItemCustomModelData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -121,16 +122,17 @@ public class BadgeListGUI implements Listener {
 
         // badgeId, badgeTitle, badgeName, badgeDesc, targetValue, value, startTime, completeTime, completePercentage
         StatBadgeLang lang = plugin.getLangConfig();
+        PlayerStats stats = badge.getStats();
         Object[] args = new Object[] {
                 badge.getId(),
                 ChatColor.translateAlternateColorCodes('&', badge.getTitle()),
                 ChatColor.translateAlternateColorCodes('&', badge.getName()),
                 ChatColor.translateAlternateColorCodes('&', badge.getDescription()),
-                badge.getStats().formatValue(lang, badge.getTargetValue()),
-                badge.getStats().formatValue(lang, badge.getStats().getValue()),
+                stats.formatValue(lang, stats.getTargetValue()),
+                stats.formatValue(lang, stats.getValue()),
                 Optional.ofNullable(badge.getStartTime()).map(t -> lang.formatDateTime(t, true, false)).orElse("?"),
                 Optional.ofNullable(badge.getCompleteTime()).map(t -> lang.formatDateTime(t, true, false)).orElse("?"),
-                badge.getTargetValue() != 0 ? Math.max(0, (double) badge.getStats().getValue() / badge.getTargetValue() * 100) : 0
+                stats.getTargetValue() != 0 ? Math.max(0, (double) stats.getValue() / stats.getTargetValue() * 100) : 0
         };
         // TODO: change selected badge
         Component title = lang.format(badge.isCompleted() ? Lang.UI_BADGE_LIST_ITEM_TITLE_COMPLETED : Lang.UI_BADGE_LIST_ITEM_TITLE, args);

@@ -13,8 +13,8 @@ public class PlayerOnlineActionStats extends PlayerActionStats {
     public static final String KEY_AFK_ON = "1";
     private final boolean onlyPlayTime;
 
-    public PlayerOnlineActionStats(UUID playerId, ActionType actionType, long value, boolean onlyPlayTime) {
-        super(playerId, actionType, value);
+    public PlayerOnlineActionStats(UUID playerId, ActionType actionType, long value, long targetValue, boolean onlyPlayTime) {
+        super(playerId, actionType, value, targetValue);
         this.onlyPlayTime = onlyPlayTime;
     }
 

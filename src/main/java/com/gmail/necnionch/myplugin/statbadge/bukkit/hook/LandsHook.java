@@ -47,20 +47,20 @@ public class LandsHook extends PluginHook implements Listener {
         lands = LandsIntegration.of(this.plugin.getPlugin());
         stats.addPlayerStatsProvider(statsLandChunks, new PlayerStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerStats create(UUID playerId, ConfigurationSection config) {
-                return new PlayerStats(playerId, statsLandChunks, getOwnLandChunkCountOrZero(playerId));
+            public PlayerStats create(UUID playerId, ConfigurationSection config, long targetValue) {
+                return new PlayerStats(playerId, statsLandChunks, getOwnLandChunkCountOrZero(playerId), targetValue);
             }
         });
         stats.addPlayerActionStatsProvider(actionWarWins, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
-                return new PlayerLandWarCount(playerId, actionWarWins, 0);
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
+                return new PlayerLandWarCount(playerId, actionWarWins, 0, targetValue);
             }
         });
         stats.addPlayerActionStatsProvider(actionWarLoses, new PlayerActionStatsProvider(this.plugin.getPlugin()) {
             @Override
-            public PlayerActionStats create(UUID playerId, ConfigurationSection config) throws ConfigurationError {
-                return new PlayerLandWarCount(playerId, actionWarLoses, 0);
+            public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
+                return new PlayerLandWarCount(playerId, actionWarLoses, 0, targetValue);
             }
         });
         return true;
@@ -177,8 +177,8 @@ public class LandsHook extends PluginHook implements Listener {
 
 
     public static class PlayerLandWarCount extends PlayerActionStats {
-        public PlayerLandWarCount(UUID playerId, ActionType sourceActionType, long value) {
-            super(playerId, sourceActionType, value);
+        public PlayerLandWarCount(UUID playerId, ActionType sourceActionType, long value, long targetValue) {
+            super(playerId, sourceActionType, value, targetValue);
         }
 
         @Override

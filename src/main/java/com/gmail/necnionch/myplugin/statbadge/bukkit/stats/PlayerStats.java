@@ -1,5 +1,6 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.stats;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 
 import java.util.UUID;
@@ -12,12 +13,14 @@ public class PlayerStats {
 
     private final StatsType type;
     private final UUID player;
+    private final long targetValue;
     private long value;
 
-    public PlayerStats(UUID playerId, StatsType statsType, long value) {
+    public PlayerStats(UUID playerId, StatsType statsType, long value, long targetValue) {
         this.player = playerId;
         this.type = statsType;
         this.value = value;
+        this.targetValue = targetValue;
     }
 
     public UUID getPlayer() {
@@ -36,8 +39,16 @@ public class PlayerStats {
         this.value = value;
     }
 
+    public long getTargetValue() {
+        return targetValue;
+    }
+
     public String formatValue(StatBadgeLang lang, long value) {
         return String.format("%,d", value);
+    }
+
+    public boolean compareTargetValue(Badge<?> badge) {
+        return getTargetValue() <= value;
     }
 
     @Override

@@ -222,13 +222,13 @@ public class StatManager {
         if (statsType.equals(PlayerActionStats.STATS_TYPE.toString()))
             return createPlayerActionStats(player, entry).map(s -> s);
         return getPlayerStatsProvider(statsType)
-                .map(p -> p.create(player, entry.config()));
+                .map(p -> p.create(player, entry.config(), entry.targetValue()));
     }
 
     private Optional<PlayerActionStats> createPlayerActionStats(UUID player, BadgeEntry.Stats entry) {
         String actionType = completeAliasedType(Objects.requireNonNull(entry.config().getString("action"), "Required 'action' type"));
         return getPlayerActionStatsProvider(actionType)
-                .map(p -> p.create(player, entry.config()));
+                .map(p -> p.create(player, entry.config(), entry.targetValue()));
     }
 
     private CompletableFuture<List<Badge<?>>> loadPlayerBadges(UUID player) {
@@ -275,7 +275,7 @@ public class StatManager {
                 if (partial != null) {
                     Instant startTime = partial.startTime().map(Instant::ofEpochMilli).orElse(null);
                     Instant completeTime = partial.completeTime().map(Instant::ofEpochMilli).orElse(null);
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime, badgeEntry.stats().targetValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, startTime, completeTime);
 
                     if (playerStats instanceof PlayerActionStats) {
                         try {
@@ -288,7 +288,7 @@ public class StatManager {
                     }
 
                 } else {
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, badgeEntry.stats().targetValue());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null);
                 }
 
                 badges.add(badge);
@@ -365,7 +365,7 @@ public class StatManager {
     }
 
     private void processBadgeValueComplete(Player player, Badge<?> badge, Instant time) {
-        if (badge.isCompleted() || badge.getStats().getValue() < badge.getTargetValue())
+        if (badge.isCompleted() || !badge.getStats().compareTargetValue(badge))
             return;
 
         badge.setCompleteTime(time);

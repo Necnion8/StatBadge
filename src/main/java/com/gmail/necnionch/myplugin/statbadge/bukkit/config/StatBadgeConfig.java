@@ -27,6 +27,14 @@ public class StatBadgeConfig extends BukkitConfiguration {
         return debug;
     }
 
+    public boolean isShowBadgeCompleteMessage() {
+        return config.getBoolean("show-badge-complete-message", true);
+    }
+
+    public boolean isBadgesGuiEnableIconGlowingComplete() {
+        return config.getBoolean("badges-gui.enable-icon-glowing-complete", true);
+    }
+
     public String getDatabaseType() {
         return config.getString("database.type", "");
     }

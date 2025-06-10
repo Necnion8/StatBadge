@@ -1,9 +1,11 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BadgesCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BukkitCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.StatBadgeCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.MySQLDatabase;
@@ -17,6 +19,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerActionStatsProvider;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobActionStats;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerMobEventListener;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerOnlineActionStats;
@@ -309,6 +312,11 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     }
 
     @Override
+    public StatBadgeConfig getPluginConfig() {
+        return config;
+    }
+
+    @Override
     public BadgesConfig getBadgesConfig() {
         return badgesConfig;
     }
@@ -407,27 +415,42 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @EventHandler
     public void onBadgeValue(PlayerBadgeValueChangeEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(ChatColor.DARK_AQUA + "onBadgeValueChange -> " + event.getBadge().getId() + " "
-                + ChatColor.DARK_PURPLE + event.getOldValue() + ChatColor.WHITE + " -> " + ChatColor.LIGHT_PURPLE + event.getNewValue());
+        logDebug(() -> player.getUniqueId() + " onBadgeValueChange [" + event.getBadge().getId() + "] " + event.getOldValue() + " -> " + event.getNewValue());
     }
 
     @EventHandler
     public void onBadgeComplete(PlayerBadgeCompleteEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(ChatColor.DARK_AQUA + "onBadgeComplete -> " + event.getBadge().getId() + " "
-                + ChatColor.LIGHT_PURPLE + event.getBadge().getStats().getValue() + " " + ChatColor.WHITE + event.getBadge().getCompleteTime());
+        Badge<?> badge = event.getBadge();
+        logDebug(() -> player.getUniqueId() + " onBadgeComplete [" + badge.getId() + "] " + badge.getStats().getValue() + " (" + badge.getCompleteTime() + ")");
+
+        if (config.isShowBadgeCompleteMessage()) {
+            PlayerStats stats = badge.getStats();
+            Object[] args = new Object[] {
+                    badge.getId(),
+                    ChatColor.translateAlternateColorCodes('&', badge.getTitle()),
+                    ChatColor.translateAlternateColorCodes('&', badge.getName()),
+                    ChatColor.translateAlternateColorCodes('&', badge.getDescription()),
+                    stats.formatValue(langConfig, stats.getTargetValue()),
+                    stats.formatValue(langConfig, stats.getValue()),
+                    Optional.ofNullable(badge.getStartTime()).map(t -> langConfig.formatDateTime(t, true, false)).orElse("?"),
+                    Optional.ofNullable(badge.getCompleteTime()).map(t -> langConfig.formatDateTime(t, true, false)).orElse("?"),
+                    stats.getTargetValue() != 0 ? Math.max(0, (double) stats.getValue() / stats.getTargetValue() * 100) : 0
+            };
+            commands.getAudience(player).sendMessage(langConfig.format(Lang.NOTIFY_BADGE_COMPLETED, args));
+        }
     }
 
     @EventHandler
     public void onAction(PlayerActionEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(ChatColor.DARK_RED + "onAction -> " + event.getAction().getType() + ChatColor.GRAY + " " + event.getAction().getKey1() + ", " + event.getAction().getKey2() + ", " + event.getAction().getKey3());
+        logDebug(() -> player.getUniqueId() + " onAction [" + event.getAction().getType() + "] " + event.getAction().getKey1() + ", " + event.getAction().getKey2() + ", " + event.getAction().getKey3());
     }
 
     @EventHandler
     public void onStats(PlayerStatsEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(ChatColor.DARK_RED + "onStats -> " + event.getType() + ChatColor.GRAY + " " + event.getValue() + " (" + event.getTime() + ")");
+        logDebug(() -> player.getUniqueId() + " onStats [" + event.getType() + "] " + event.getValue() + " (" + event.getTime() + ")");
     }
 
 }

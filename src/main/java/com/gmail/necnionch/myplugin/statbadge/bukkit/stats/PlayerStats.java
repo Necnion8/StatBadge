@@ -39,6 +39,10 @@ public class PlayerStats {
         this.value = value;
     }
 
+    public void resetValue() {
+        this.value = 0;
+    }
+
     public long getTargetValue() {
         return targetValue;
     }

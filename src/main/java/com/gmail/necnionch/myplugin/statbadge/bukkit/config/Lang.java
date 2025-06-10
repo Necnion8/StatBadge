@@ -43,6 +43,7 @@ public enum Lang {
     UI_BADGE_LIST_ITEM_DESCRIPTION_COMPLETED("&7%4$s\n\n&f目標数:  %5$s"),
     UI_BADGE_LIST_ITEM_TITLE_SELECTED("&f称号 &6%3$s  &e(表示中)"),
     UI_BADGE_LIST_ITEM_DESCRIPTION_SELECTED("&7%4$s\n\n&f目標数:  %5$s"),
+    NOTIFY_BADGE_COMPLETED("&e称号 &6%3$s &eを獲得しました！"),
     ;
 
     private final String defaultText;

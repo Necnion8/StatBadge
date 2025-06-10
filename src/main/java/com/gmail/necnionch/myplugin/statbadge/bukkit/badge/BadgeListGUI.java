@@ -11,6 +11,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -39,6 +40,7 @@ public class BadgeListGUI implements Listener {
     private final ItemStack nextPageItem;
     private final int maxPage;
     private final float badgeCompleteProgress;
+    private final boolean glowingCompleted;
     private Inventory inventory;
     private int currentPage;
 
@@ -80,6 +82,7 @@ public class BadgeListGUI implements Listener {
         this.pageable = pageable;
         this.badges = badges;
         this.maxPage = maxPage;
+        this.glowingCompleted = plugin.getPluginConfig().isBadgesGuiEnableIconGlowingComplete();
         this.badgeCompleteProgress = badges.isEmpty() ? 0f : (float) badges.stream().filter(Badge::isCompleted).count() / badges.size();
         this.inventory = createInventory(plugin, player, currentPage, maxPage, size);
 
@@ -140,6 +143,10 @@ public class BadgeListGUI implements Listener {
 
         itemMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', serializer.serialize(title)));
         itemMeta.setLore(Arrays.asList(ChatColor.translateAlternateColorCodes('&', serializer.serialize(desc)).split("\n")));
+
+        if (badge.isCompleted() && glowingCompleted) {
+            itemMeta.addEnchant(Enchantment.DURABILITY, 0, true);
+        }
 
         itemStack.setItemMeta(itemMeta);
         return itemStack;

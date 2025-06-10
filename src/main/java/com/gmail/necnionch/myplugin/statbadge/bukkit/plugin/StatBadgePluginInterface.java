@@ -1,6 +1,7 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -31,11 +32,21 @@ public interface StatBadgePluginInterface {
 
     Collection<? extends Player> getOnlinePlayers();
 
+    /**
+     * {@link StatManager} を返します
+     * @throws RuntimeException 準備ができていない
+     */
     StatManager getStats();
 
+    /**
+     * {@link StatManager} を返します<br>
+     * {@link #getStats()} と違ってこのメソッドは常に {@link StatManager} を返します
+     */
     StatManager getStatManager();
 
     PlayerOnlineTimeManager getPlayerOnlineTimeManager();
+
+    StatBadgeConfig getPluginConfig();
 
     BadgesConfig getBadgesConfig();
 

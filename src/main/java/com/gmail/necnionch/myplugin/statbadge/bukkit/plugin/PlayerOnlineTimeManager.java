@@ -13,10 +13,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PlayerOnlineTimeManager implements Listener {
 
@@ -40,7 +37,7 @@ public class PlayerOnlineTimeManager implements Listener {
      */
     public void stop() {
         HandlerList.unregisterAll(this);
-        new ArrayList<>(players.keySet()).forEach(this::putPlayerTimerAction);
+        new ArrayList<>(players.keySet()).forEach(this::removeAndCommitPlayerTimerAction);
         players.clear();
     }
 
@@ -68,16 +65,23 @@ public class PlayerOnlineTimeManager implements Listener {
     }
 
     private void startPlayerTimer(Player player, boolean isAFK) {
-        putPlayerTimerAction(player);
-        if (players.containsKey(player)) {
-            players.get(player).afk = isAFK;
-            players.get(player).startTime = Instant.now();
-        } else {
-            players.put(player, new PlayerTimer(isAFK, Instant.now()));
+        removeAndCommitPlayerTimerAction(player);
+        players.put(player, new PlayerTimer(isAFK, Instant.now()));
+
+        OptionalLong minTime = plugin.getStatManager().streamPlayerBadges(player.getUniqueId())
+                .filter(b -> !b.isCompleted())
+                .filter(b -> b.getStats() instanceof PlayerOnlineActionStats)
+                .mapToLong(b -> b.getStats().getTargetValue() - b.getStats().getValue())
+                .min();
+
+        if (minTime.isPresent()) {
+            plugin.runTaskLater(() -> {
+
+            }, minTime.getAsLong());
         }
     }
 
-    private void putPlayerTimerAction(Player player) {
+    private void removeAndCommitPlayerTimerAction(Player player) {
         PlayerTimer timer;
         if ((timer = players.remove(player)) == null)
             return;
@@ -133,7 +137,7 @@ public class PlayerOnlineTimeManager implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        putPlayerTimerAction(event.getPlayer());
+        removeAndCommitPlayerTimerAction(event.getPlayer());
         clearPlayerTimer(event.getPlayer());
     }
 

@@ -404,6 +404,7 @@ public class StatManager {
             if (badge.isCompleted()) {
                 badge.setStartTime(startTime);
                 badge.setCompleteTime(null);
+                badge.getStats().resetValue();
                 plugin.callEvent(new PlayerBadgeRemoveEvent(player, badge));
             }
         });

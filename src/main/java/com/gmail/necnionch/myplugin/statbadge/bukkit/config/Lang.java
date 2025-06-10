@@ -36,6 +36,8 @@ public enum Lang {
     UI_BADGE_LIST_TITLE("称号一覧 (%1$d/%2$d) (達成率: &l%3$.0f%%&r)"),
     UI_BADGE_LIST_BACK_PAGE("&b前のページへ &7(%1$d/%2$d)"),
     UI_BADGE_LIST_NEXT_PAGE("&6次のページへ &7(%1$d/%2$d)"),
+    UI_BADGE_LIST_BADGE_SELECT("&e称号の表示を &6%1$s &eに設定しました！"),
+    UI_BADGE_LIST_BADGE_SELECT_UNSET("&f称号の表示を無しにしました"),
     // badgeId, badgeTitle, badgeName, badgeDesc, targetValue, value, startTime, completeTime, completePercentage
     UI_BADGE_LIST_ITEM_TITLE("&f称号 &6%3$s"),
     UI_BADGE_LIST_ITEM_DESCRIPTION("&7%4$s\n\n&f目標:  %5$s &7(%9$.1f%%)"),

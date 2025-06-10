@@ -11,6 +11,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.SoundCategory;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
@@ -93,6 +94,7 @@ public class BadgeListGUI implements Listener {
     private void show() {
         fillSlots();
         player.openInventory(inventory);
+        player.playSound(player.getLocation(), "entity.villager.work_librarian", SoundCategory.MASTER, 1f, 1f);
     }
 
     public void fillSlots() {
@@ -225,6 +227,9 @@ public class BadgeListGUI implements Listener {
                 if (badge.isCompleted()) {
                     plugin.getStats().selectBadgeTitle(player.getUniqueId(), badge.isTitleSet() ? null : badge);
                     fillSlots();
+                    String message = ChatColor.translateAlternateColorCodes('&', plugin.getLangConfig().get(badge.isTitleSet() ? Lang.UI_BADGE_LIST_BADGE_SELECT : Lang.UI_BADGE_LIST_BADGE_SELECT_UNSET));
+                    player.sendMessage(String.format(message, badge.isTitleSet() ? ChatColor.translateAlternateColorCodes('&', badge.getName()) : ""));
+                    player.playSound(player.getLocation(), "entity.experience_orb.pickup", SoundCategory.MASTER, 1f, 2f);
                 }
             }
         }

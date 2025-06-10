@@ -1,5 +1,6 @@
 package com.gmail.necnionch.myplugin.statbadge.bukkit.plugin;
 
+import com.gmail.necnionch.myplugin.statbadge.bukkit.event.PlayerBadgeLoadEvent;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.hook.AFKProvider;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.ActionType;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerAction;
@@ -10,10 +11,14 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class PlayerOnlineTimeManager implements Listener {
 
@@ -66,25 +71,39 @@ public class PlayerOnlineTimeManager implements Listener {
 
     private void startPlayerTimer(Player player, boolean isAFK) {
         removeAndCommitPlayerTimerAction(player);
-        players.put(player, new PlayerTimer(isAFK, Instant.now()));
+        PlayerTimer timer = new PlayerTimer(isAFK, Instant.now());
+        players.put(player, timer);
 
-        OptionalLong minTime = plugin.getStatManager().streamPlayerBadges(player.getUniqueId())
-                .filter(b -> !b.isCompleted())
-                .filter(b -> b.getStats() instanceof PlayerOnlineActionStats)
+        startPreTimer(player, timer);
+    }
+
+    private void startPreTimer(Player player, PlayerTimer timer) {
+        plugin.getStatManager().streamPlayerBadges(player.getUniqueId())
+                .filter(b -> b.getPlayer().equals(player.getUniqueId()))
+                .filter(b -> !b.isCompleted() && b.getStats() instanceof PlayerOnlineActionStats)
                 .mapToLong(b -> b.getStats().getTargetValue() - b.getStats().getValue())
-                .min();
+                .min()
+                .ifPresent(minTime -> {
+                    if (timer.timer != null)
+                        timer.timer.cancel();
 
-        if (minTime.isPresent()) {
-            plugin.runTaskLater(() -> {
-
-            }, minTime.getAsLong());
-        }
+                    timer.timer = plugin.runTaskLater(() -> {
+                        timer.timer = null;
+                        PlayerTimer cPlayer = players.get(player);
+                        if (cPlayer != null) {
+                            startPlayerTimer(player, cPlayer.afk);
+                        }
+                    }, minTime / 1000 * 20 + 20);
+                });
     }
 
     private void removeAndCommitPlayerTimerAction(Player player) {
         PlayerTimer timer;
         if ((timer = players.remove(player)) == null)
             return;
+
+        if (timer.timer != null)
+            timer.timer.cancel();
 
         Instant now = Instant.now();
         long duration = now.toEpochMilli() - timer.startTime.toEpochMilli();
@@ -141,10 +160,19 @@ public class PlayerOnlineTimeManager implements Listener {
         clearPlayerTimer(event.getPlayer());
     }
 
+    @EventHandler
+    public void onLoadBadge(PlayerBadgeLoadEvent event) {
+        PlayerTimer timer;
+        if ((timer = players.get(event.getPlayer())) == null)
+            return;
+        startPreTimer(event.getPlayer(), timer);
+    }
+
 
     private static class PlayerTimer {
-        private boolean afk;
-        private Instant startTime;
+        private final boolean afk;
+        private final Instant startTime;
+        private BukkitTask timer;
 
         public PlayerTimer(boolean afk, Instant startTime) {
             this.afk = afk;

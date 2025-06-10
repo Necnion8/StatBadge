@@ -242,14 +242,14 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
         statManager.addPlayerActionStatsProvider(actionOnlineTime, new PlayerActionStatsProvider(this) {
             @Override
             public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
-                long duration = TimeUnit.HOURS.toMillis(targetValue);
+                long duration = TimeUnit.MINUTES.toMillis((long) (config.getDouble("value") * 60));
                 return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, duration, false);
             }
         });
         statManager.addPlayerActionStatsProvider(actionPlayTime, new PlayerActionStatsProvider(this) {
             @Override
             public PlayerActionStats create(UUID playerId, ConfigurationSection config, long targetValue) throws ConfigurationError {
-                long duration = TimeUnit.HOURS.toMillis(targetValue);
+                long duration = TimeUnit.MINUTES.toMillis((long) (config.getDouble("value") * 60));
                 return new PlayerOnlineActionStats(playerId, actionOnlineTimeSource, 0, duration, true);
             }
         });
@@ -356,6 +356,11 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
     @Override
     public BukkitTask runTaskLaterAsynchronously(Runnable task, long delay) {
         return getServer().getScheduler().runTaskLaterAsynchronously(this, task, delay);
+    }
+
+    @Override
+    public BukkitTask runTaskLater(Runnable task, long delay) {
+        return getServer().getScheduler().runTaskLater(this, task, delay);
     }
 
     @Override

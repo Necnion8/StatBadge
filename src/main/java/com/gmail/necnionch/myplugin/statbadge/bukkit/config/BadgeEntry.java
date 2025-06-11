@@ -8,7 +8,7 @@ public record BadgeEntry(
         String id,
         String name,
         String description,
-        String title,
+        @Nullable String title,
         Icon icon,
         Stats stats
 ) {

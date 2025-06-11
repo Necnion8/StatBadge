@@ -28,7 +28,7 @@ public class PlaceholderAPIHook extends PluginHook {
         this.owner = owner;
         StatBadgeLang lang = owner.getLangConfig();
         this.valuePlacers = Stream.of(
-                new ValuePlacer("title", true, badge -> ChatColor.translateAlternateColorCodes('&', badge.getTitle())),
+                new ValuePlacer("title", true, badge -> ChatColor.translateAlternateColorCodes('&', badge.getTitleOrName())),
                 new ValuePlacer("name", true, badge -> ChatColor.translateAlternateColorCodes('&', badge.getName())),
                 new ValuePlacer("id", true, Badge::getId),
                 new ValuePlacer("current_value", false, badge -> badge.getStats().formatValue(lang, badge.getStats().getValue())),

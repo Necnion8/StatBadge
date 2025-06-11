@@ -1,15 +1,15 @@
-skeleton_kills:  # badge id
+skeleton_kills:  # 称号ID
   # 称号名 (カラーコード可)
-  name: "&6Skeleton Kills"
-  # 称号タグ (カラーコード可)
-  title: ""
+  name: "&bスケルトンの討伐"
+  # 称号タグ (カラーコード可、null で称号名)
+  title: null
   # 説明文 (カラーコード、複数行可)
-  description: "Kill skeleton"
+  description: "スケルトンを討伐した証"
 
   # GUIで表示される称号アイコンの見た目を設定します
   icon:
     # アイテムID
-    type: apple
+    type: iron_sword
     # カスタムテクスチャ用の値を設定できます (1.14以降のみ)
     custom-model-data: 123
   # ※ アイテムIDのみ指定する場合のみ、以下のように指定することもできます
@@ -25,4 +25,4 @@ skeleton_kills:  # badge id
     value: 10
     # アクション entity_killed には以下の設定が必要です
     # ※ アクションによって必要な設定項目が異なるため、StatBadgeプラグインの説明ページを参照して設定してください。
-    mob: "SkeletonKing"
+    entity: skeleton

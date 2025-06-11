@@ -42,7 +42,7 @@ public class BadgesConfig extends BukkitConfiguration {
         BadgeEntry.Icon icon = parseBadgeEntryIcon(config);
         return new BadgeEntry(
                 id,
-                config.getString("name"),
+                config.getString("name", id),
                 config.getString("description"),
                 config.getString("title"),
                 icon, stats

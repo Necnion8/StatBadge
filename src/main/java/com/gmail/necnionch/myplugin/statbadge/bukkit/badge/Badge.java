@@ -79,8 +79,12 @@ public class Badge<S extends PlayerStats> {
         return config.description();
     }
 
-    public String getTitle() {
+    public @Nullable String getTitle() {
         return config.title();
+    }
+
+    public String getTitleOrName() {
+        return Optional.ofNullable(config.title()).orElse(getName());
     }
 
     public Material getIcon() {

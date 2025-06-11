@@ -434,7 +434,7 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
             PlayerStats stats = badge.getStats();
             Object[] args = new Object[] {
                     badge.getId(),
-                    ChatColor.translateAlternateColorCodes('&', badge.getTitle()),
+                    ChatColor.translateAlternateColorCodes('&', badge.getTitleOrName()),
                     ChatColor.translateAlternateColorCodes('&', badge.getName()),
                     ChatColor.translateAlternateColorCodes('&', badge.getDescription()),
                     stats.formatValue(langConfig, stats.getTargetValue()),

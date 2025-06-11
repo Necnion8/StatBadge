@@ -292,7 +292,7 @@ public class StatManager {
                     }
 
                 } else {
-                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, partial.titleSet());
+                    badge = new Badge<>(badgeEntry.id(), badgeEntry, player, playerStats, Instant.now(), null, false);
                 }
 
                 badges.add(badge);

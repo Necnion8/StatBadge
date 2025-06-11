@@ -95,7 +95,7 @@ public class StatBadgeCommand extends Command {
                 .appendNewline()
                 .appendNewline()
                 .append(lang.format(Lang.COMMAND_BADGE_LIST_ITEM_NAME))
-                .append(serializer.deserialize(badge.getTitle()))
+                .append(serializer.deserialize(badge.getTitleOrName()))
                 .appendNewline()
                 .appendNewline()
                 .append(lang.format(Lang.COMMAND_BADGE_LIST_ITEM_DESCRIPTION))

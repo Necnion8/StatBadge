@@ -4,7 +4,6 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.plugin.StatBadgePluginInterface;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.PlayerStats;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -33,17 +32,13 @@ public class PlaceholderAPIHook extends PluginHook {
                 new ValuePlacer("id", true, Badge::getId),
                 new ValuePlacer("current_value", false, badge -> badge.getStats().formatValue(lang, badge.getStats().getValue())),
                 new ValuePlacer("current_value_raw", false, badge -> "" + badge.getStats().getValue()),
-                new ValuePlacer("current_progress", false, badge -> lang.format(Lang.PLACEHOLDER_VALUE_PROGRESS, getStats(badge).getTargetValue() != 0 ? Math.max(0, (double) badge.getStats().getValue() / badge.getStats().getTargetValue() * 100) : 0).content()),
+                new ValuePlacer("current_progress", false, badge -> lang.format(Lang.PLACEHOLDER_VALUE_PROGRESS, badge.getStats().getTargetValue() != 0 ? Math.max(0, (double) badge.getStats().getValue() / badge.getStats().getTargetValue() * 100) : 0).content()),
                 new ValuePlacer("target_value", false, badge -> badge.getStats().formatValue(lang, badge.getStats().getTargetValue())),
                 new ValuePlacer("target_value_raw", false, badge -> "" + badge.getStats().getTargetValue()),
                 new ValuePlacer("start_time", false, badge -> Optional.ofNullable(badge.getStartTime()).map(t -> lang.formatDateTime(t, true, false)).orElse("?")),
                 new ValuePlacer("complete_time", false, badge -> Optional.ofNullable(badge.getCompleteTime()).map(t -> lang.formatDateTime(t, true, false)).orElse("?")),
                 new ValuePlacer("completed", false, badge -> ChatColor.translateAlternateColorCodes('&', lang.get(badge.isCompleted() ? Lang.PLACEHOLDER_VALUE_COMPLETE : Lang.PLACEHOLDER_VALUE_NOT_COMPLETE)))
         ).collect(Collectors.toMap(p -> p.key, p -> p));
-    }
-
-    private static PlayerStats getStats(Badge<?> badge) {
-        return badge.getStats();
     }
 
     @Override
@@ -80,6 +75,10 @@ public class PlaceholderAPIHook extends PluginHook {
             public @NotNull List<String> getPlaceholders() {
                 List<String> values = new ArrayList<>();
 
+                values.add("%" + getIdentifier() + "_badge_count%");
+                values.add("%" + getIdentifier() + "_badge_count_completed%");
+                values.add("%" + getIdentifier() + "_badge_progress%");
+
                 valuePlacers.keySet().stream()
                         .map(k -> "%" + getIdentifier() + "_" + k + "%")
                         .forEachOrdered(values::add);
@@ -93,9 +92,23 @@ public class PlaceholderAPIHook extends PluginHook {
 
             @Override
             public String onRequest(OfflinePlayer player, @NotNull String params) {
-                Badge<?> badge = owner.getStatManager().getSelectBadgeTitle(player.getUniqueId());
+
+                switch (params) {
+                    case "badge_count":
+                        return "" + owner.getStatManager().streamPlayerBadges(player.getUniqueId()).count();
+                    case "badge_count_completed":
+                        return "" + owner.getStatManager().streamCompletedPlayerBadges(player.getUniqueId()).count();
+                    case "badge_progress": {
+                        long total = owner.getStatManager().streamPlayerBadges(player.getUniqueId()).count();
+                        long completed = owner.getStatManager().streamCompletedPlayerBadges(player.getUniqueId()).count();
+                        return owner.getLangConfig().format(Lang.PLACEHOLDER_VALUE_PROGRESS, total == 0 ? 0f : (float) completed / total * 100).content();
+                    }
+                }
+
+                Badge<?> badge;
                 ValuePlacer placer = valuePlacers.get(params);
                 if (placer != null) {
+                    badge = owner.getStatManager().getSelectBadgeTitle(player.getUniqueId());
                     if (badge != null)
                         return placer.processor.apply(badge);
                     if (placer.notSetLabel)

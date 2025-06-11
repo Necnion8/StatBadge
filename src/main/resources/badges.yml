@@ -26,3 +26,8 @@ skeleton_kills:  # 称号ID
     # アクション entity_killed には以下の設定が必要です
     # ※ アクションによって必要な設定項目が異なるため、StatBadgeプラグインの説明ページを参照して設定してください。
     entity: skeleton
+
+  # 称号の獲得時の設定
+  completes:
+    # 再生する音 (nullでプラグイン設定を使用、none で無音)
+    sound: null

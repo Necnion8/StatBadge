@@ -4,10 +4,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.badge.Badge;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BadgesCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.BukkitCommand;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.command.StatBadgeCommand;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.BadgesConfig;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.Lang;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeConfig;
-import com.gmail.necnionch.myplugin.statbadge.bukkit.config.StatBadgeLang;
+import com.gmail.necnionch.myplugin.statbadge.bukkit.config.*;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.MySQLDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.StatBadgeDatabase;
@@ -26,6 +23,7 @@ import com.gmail.necnionch.myplugin.statbadge.bukkit.stats.impl.PlayerOnlineActi
 import com.gmail.necnionch.myplugin.statbadge.bukkit.util.ItemCustomModelData;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -444,6 +442,15 @@ public final class StatBadgePlugin extends JavaPlugin implements StatBadgePlugin
                     stats.getTargetValue() != 0 ? Math.max(0, (double) stats.getValue() / stats.getTargetValue() * 100) : 0
             };
             commands.getAudience(player).sendMessage(langConfig.format(Lang.NOTIFY_BADGE_COMPLETED, args));
+        }
+
+        BadgeEntry.Completes completes = badge.getConfig().completes();
+        Sound sound = completes.sound();
+        if (sound == null && completes.useDefaultSound()) {
+            sound = config.getBadgeCompleteSound();
+        }
+        if (sound != null) {
+            player.playSound(player.getLocation(), sound, 1f, 1f);
         }
     }
 

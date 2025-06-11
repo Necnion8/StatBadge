@@ -2,9 +2,12 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.config;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.MySQLDatabase;
 import com.gmail.necnionch.myplugin.statbadge.bukkit.database.SQLiteDatabase;
+import org.bukkit.Sound;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -12,6 +15,7 @@ import java.util.stream.Collectors;
 public class StatBadgeConfig extends BukkitConfiguration {
 
     private boolean debug;
+    private @Nullable Sound badgeCompleteSound;
 
     public StatBadgeConfig(Plugin plugin) {
         super(plugin);
@@ -20,6 +24,17 @@ public class StatBadgeConfig extends BukkitConfiguration {
     @Override
     protected boolean onLoaded() {
         debug = config.getBoolean("debug", false);
+        badgeCompleteSound = null;
+
+        String tmp = config.getString("badge-complete-sound");
+        if (tmp != null) {
+            try {
+                badgeCompleteSound = Sound.valueOf(tmp.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                log.warning("Unknown sound: " + tmp);
+            }
+        }
+
         return true;
     }
 
@@ -29,6 +44,10 @@ public class StatBadgeConfig extends BukkitConfiguration {
 
     public boolean isShowBadgeCompleteMessage() {
         return config.getBoolean("show-badge-complete-message", true);
+    }
+
+    public @Nullable Sound getBadgeCompleteSound() {
+        return badgeCompleteSound;
     }
 
     public boolean isBadgesGuiEnableIconGlowingComplete() {

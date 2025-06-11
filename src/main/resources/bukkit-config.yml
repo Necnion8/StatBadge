@@ -2,6 +2,9 @@
 # 称号を獲得した時にメッセージを表示する
 show-badge-complete-message: true
 
+# 称号を獲得した時に音を再生する (nullで無効)
+badge-complete-sound: ui_toast_challenge_complete
+
 # 称号リストの設定
 badges-gui:
   # 達成した称号アイコンにエンチャント効果を適用します

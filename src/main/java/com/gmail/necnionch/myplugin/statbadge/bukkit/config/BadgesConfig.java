@@ -2,10 +2,12 @@ package com.gmail.necnionch.myplugin.statbadge.bukkit.config;
 
 import com.gmail.necnionch.myplugin.statbadge.bukkit.util.ItemCustomModelData;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class BadgesConfig extends BukkitConfiguration {
@@ -40,12 +42,13 @@ public class BadgesConfig extends BukkitConfiguration {
             return null;
 
         BadgeEntry.Icon icon = parseBadgeEntryIcon(config);
+        BadgeEntry.Completes completes = parseBadgeEntryCompletes(config);
         return new BadgeEntry(
                 id,
                 config.getString("name", id),
                 config.getString("description"),
                 config.getString("title"),
-                icon, stats
+                icon, stats, completes
         );
     }
 
@@ -72,6 +75,31 @@ public class BadgesConfig extends BukkitConfiguration {
                 config.getLong("value", 0),
                 config
         );
+    }
+
+    private BadgeEntry.Completes parseBadgeEntryCompletes(ConfigurationSection parent) {
+        ConfigurationSection config = parent.getConfigurationSection("completes");
+        if (config == null)
+            return null;
+
+        Sound sound;
+        boolean useDefaultSound = false;
+        String tmp = config.getString("sound");
+        if (tmp == null) {
+            sound = null;
+            useDefaultSound = true;
+        } else if (tmp.equalsIgnoreCase("none")) {
+            sound = null;
+        } else {
+            try {
+                sound = Sound.valueOf(tmp.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                log.warning("Unknown sound: " + tmp);
+                sound = null;
+            }
+        }
+
+        return new BadgeEntry.Completes(sound, useDefaultSound);
     }
 
 

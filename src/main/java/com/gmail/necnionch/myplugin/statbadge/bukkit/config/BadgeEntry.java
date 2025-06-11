@@ -22,6 +22,7 @@ public record BadgeEntry(
     }
 
     public record Completes(@Nullable Sound sound, boolean useDefaultSound) {
+        public static final Completes DEFAULT = new Completes(null, true);
     }
 
 }

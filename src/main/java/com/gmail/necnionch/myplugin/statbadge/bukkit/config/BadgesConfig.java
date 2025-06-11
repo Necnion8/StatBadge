@@ -80,7 +80,7 @@ public class BadgesConfig extends BukkitConfiguration {
     private BadgeEntry.Completes parseBadgeEntryCompletes(ConfigurationSection parent) {
         ConfigurationSection config = parent.getConfigurationSection("completes");
         if (config == null)
-            return null;
+            return BadgeEntry.Completes.DEFAULT;
 
         Sound sound;
         boolean useDefaultSound = false;
